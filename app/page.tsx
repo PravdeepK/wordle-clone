@@ -35,10 +35,11 @@ export default function Home() {
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace("/login");
-      } else if (!user.emailVerified) {
+      } else if (!user.emailVerified && !isLocalDev) {
         await signOut(auth);
         router.replace("/login");
       } else {

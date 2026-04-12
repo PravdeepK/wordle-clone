@@ -36,7 +36,7 @@ export default function MultiplayerPage() {
     return () => unsub();
   }, [router]);
 
-  const { sendJsonMessage } = useWebSocket({
+  const { sendJsonMessage, connected, wsError } = useWebSocket({
     onRoomJoined: (newRoomId, newWord) => {
       setRoomId(newRoomId);
       setWord(newWord.toUpperCase());
@@ -137,15 +137,17 @@ export default function MultiplayerPage() {
     <div className="flex flex-col items-center min-h-screen gap-4 p-4 text-center">
       <h1 className="title">MULTIPLAYER</h1>
 
+      {wsError && <p className="error-message">{wsError}</p>}
+
       {!roomId ? (
         <div className="flex flex-col gap-2 mt-2">
-          <button className="scoreboard-button" onClick={() => sendJsonMessage("create-room")}>
+          <button className="scoreboard-button" onClick={() => sendJsonMessage("create-room")} disabled={!connected}>
             Start Multiplayer Game
           </button>
           <button className="scoreboard-button" onClick={() => {
             const id = prompt("Enter Room ID:");
             if (id) sendJsonMessage("join-room", { roomId: id.trim() });
-          }}>
+          }} disabled={!connected}>
             Join a Room
           </button>
         </div>
