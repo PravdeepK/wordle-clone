@@ -35,9 +35,13 @@ export default function Home() {
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) router.replace("/login");
-      else {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.replace("/login");
+      } else if (!user.emailVerified) {
+        await signOut(auth);
+        router.replace("/login");
+      } else {
         setUsername(user.displayName || "Player");
         setUid(user.uid);
       }
