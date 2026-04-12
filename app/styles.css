@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light & Dark Mode Background */
+/* ─── Light / Dark Mode ────────────────────────────────────────────────── */
 html {
   background-color: white;
   color: black;
@@ -14,20 +14,7 @@ html.dark {
   color: white;
 }
 
-/* Full-Screen Centering */
-.container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  width: 100vw;
-  padding: 20px;
-  text-align: center;
-  gap: 20px;
-}
-
-/* Title Styling */
+/* ─── Typography ─────────────────────────────────────────────────────────── */
 .title {
   font-size: 2.5rem;
   font-weight: bold;
@@ -42,7 +29,17 @@ html.dark .title {
   color: #00aaff;
 }
 
-/* Global Button Styling */
+.welcome-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #444;
+}
+
+html.dark .welcome-text {
+  color: #ccc;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 .scoreboard-button,
 .restart-button,
 .logout-button {
@@ -59,12 +56,29 @@ html.dark .title {
 }
 
 .scoreboard-button:hover,
-.restart-button:hover,
-.logout-button:hover {
+.restart-button:hover {
   background-color: #828282;
 }
 
-/* Grid Layout */
+.logout-button {
+  background-color: #cc3333;
+}
+
+.logout-button:hover {
+  background-color: #991111;
+}
+
+.active-button {
+  background-color: #002955 !important;
+  color: white !important;
+}
+
+html.dark .active-button {
+  background-color: #00aaff !important;
+  color: black !important;
+}
+
+/* ─── Grid ───────────────────────────────────────────────────────────────── */
 .grid {
   display: flex;
   flex-direction: column;
@@ -79,7 +93,7 @@ html.dark .title {
   justify-content: center;
 }
 
-/* Tile Style */
+/* ─── Tiles ──────────────────────────────────────────────────────────────── */
 .cell {
   width: 38px;
   height: 38px;
@@ -93,37 +107,31 @@ html.dark .title {
   transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
-/* Tile Colors */
+/* Override Tailwind tile colours so dark-mode variants work cleanly */
 .bg-green-500 {
   background-color: #6aaa64 !important;
   color: white !important;
+  border-color: #6aaa64 !important;
 }
 
 .bg-yellow-500 {
   background-color: #c9b458 !important;
   color: black !important;
+  border-color: #c9b458 !important;
 }
 
 .bg-gray-400 {
   background-color: #787c7e !important;
   color: white !important;
+  border-color: #787c7e !important;
 }
 
-html.dark .bg-green-500 {
-  background-color: #538d4e !important;
-}
+html.dark .bg-green-500 { background-color: #538d4e !important; border-color: #538d4e !important; }
+html.dark .bg-yellow-500 { background-color: #b59f3b !important; border-color: #b59f3b !important; }
+html.dark .bg-gray-400 { background-color: #3a3a3c !important; border-color: #3a3a3c !important; }
 
-html.dark .bg-yellow-500 {
-  background-color: #b59f3b !important;
-}
-
-html.dark .bg-gray-400 {
-  background-color: #3a3a3c !important;
-}
-
-/* Input Box */
+/* ─── Input ──────────────────────────────────────────────────────────────── */
 .input-box {
-  margin-top: 20px;
   padding: 8px;
   border: 2px solid black;
   font-size: 1rem;
@@ -141,18 +149,15 @@ html.dark .input-box {
   border-color: white;
 }
 
-/* Error Message */
+/* ─── Messages ───────────────────────────────────────────────────────────── */
 .error-message {
   color: red;
-  margin-top: 10px;
   font-size: 1rem;
   font-weight: bold;
 }
 
-/* Game Over Message */
 .game-over {
   font-size: 1.2rem;
-  margin-top: 10px;
   color: red;
 }
 
@@ -165,7 +170,19 @@ html.dark .win-message {
   color: #00ff00;
 }
 
-/* Dark Mode Toggle */
+/* Pretty Firebase error box */
+.pretty-error {
+  background-color: #ffe6e6;
+  color: #b30000;
+  padding: 10px 16px;
+  border-left: 5px solid #ff4d4d;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  max-width: 320px;
+}
+
+/* ─── Dark-mode pill toggle ──────────────────────────────────────────────── */
 .dark-mode-switch {
   position: absolute;
   top: 20px;
@@ -173,9 +190,50 @@ html.dark .win-message {
   display: inline-block;
   width: 50px;
   height: 26px;
+  cursor: pointer;
 }
 
-/* Virtual Keyboard */
+/* Hide the real checkbox */
+.dark-mode-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+/* The track */
+.slider {
+  position: absolute;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 26px;
+  transition: background-color 0.3s ease-in-out;
+}
+
+/* The knob */
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Checked state — slide knob right and turn track blue */
+.dark-mode-switch input:checked + .slider {
+  background-color: #007bff;
+}
+
+.dark-mode-switch input:checked + .slider::before {
+  transform: translateY(-50%) translateX(24px);
+}
+
+/* ─── Virtual Keyboard ───────────────────────────────────────────────────── */
 .keyboard {
   display: flex;
   flex-direction: column;
@@ -207,39 +265,21 @@ html.dark .win-message {
   justify-content: center;
 }
 
+.key:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .large-key {
   width: 60px;
 }
 
 html.dark .key {
-  background-color: white;
-  color: black;
+  background-color: #818384;
+  color: white;
 }
 
-/* Pretty Firebase Error Box */
-.pretty-error {
-  background-color: #ffe6e6;
-  color: #b30000;
-  padding: 10px 16px;
-  border-left: 5px solid #ff4d4d;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 0.95rem;
-  margin-top: 10px;
-  max-width: 320px;
-}
-
-.active-button {
-  background-color: #002955 !important;
-  color: white !important;
-}
-
-html.dark .active-button {
-  background-color: #00aaff !important;
-  color: black !important;
-}
-
-/* Mobile Optimizations */
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .title {
     font-size: 1.8rem;
