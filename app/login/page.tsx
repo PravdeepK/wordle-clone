@@ -14,6 +14,8 @@ import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
 const db = getFirestore();
 
+const TILE_COLORS = ["bg-green-500", "bg-yellow-500", "bg-gray-400", "bg-green-500", "bg-yellow-500", "bg-green-500"];
+
 export default function LoginPage() {
   const router = useRouter();
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -26,8 +28,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Resolve username → email if needed
   const resolveEmail = async (identifier: string): Promise<string | null> => {
     if (identifier.includes("@")) return identifier;
     const userDoc = await getDoc(doc(db, "users", identifier.toLowerCase()));
@@ -39,21 +41,19 @@ export default function LoginPage() {
     setError("");
     setSuccessMsg("");
     setNeedsVerification(false);
-
+    setLoading(true);
     try {
       if (isLoginMode) {
         const email = await resolveEmail(inputIdentifier);
         if (!email) { setError("Username not found."); return; }
 
         const userCred = await signInWithEmailAndPassword(auth, email, password);
-
         if (!userCred.user.emailVerified) {
           await signOut(auth);
           setNeedsVerification(true);
           setError("Please verify your email before logging in. Check your inbox (and spam folder).");
           return;
         }
-
         router.push("/");
       } else {
         if (password !== confirmPassword) { setError("Passwords do not match."); return; }
@@ -68,9 +68,6 @@ export default function LoginPage() {
         const userCred = await createUserWithEmailAndPassword(auth, inputIdentifier, password);
         await updateProfile(userCred.user, { displayName: username });
         await setDoc(userDocRef, { email: inputIdentifier, uid: userCred.user.uid });
-
-        // Send verification email then immediately sign out so they
-        // can't enter the app until they've confirmed their address.
         await sendEmailVerification(userCred.user);
         await signOut(auth);
 
@@ -87,6 +84,8 @@ export default function LoginPage() {
         ? "Error: Email already in use"
         : "Error: " + (e.message || "Something went wrong");
       setError(formatted);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,14 +93,11 @@ export default function LoginPage() {
     setError("");
     setSuccessMsg("");
     try {
-      // Re-sign in temporarily just to call sendEmailVerification
       const email = await resolveEmail(inputIdentifier);
       if (!email) { setError("Username not found."); return; }
-
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       await sendEmailVerification(userCred.user);
       await signOut(auth);
-
       setNeedsVerification(false);
       setSuccessMsg("Verification email resent! Check your inbox.");
     } catch {
@@ -109,85 +105,127 @@ export default function LoginPage() {
     }
   };
 
+  const switchMode = () => {
+    setIsLoginMode(!isLoginMode);
+    setError("");
+    setSuccessMsg("");
+    setNeedsVerification(false);
+  };
+
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen w-full text-center gap-5">
-      <h1 className="title">{isLoginMode ? "Login" : "Sign Up"}</h1>
-
-      {!isLoginMode && (
-        <input
-          className="input-box"
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-      )}
-
-      <input
-        className="input-box"
-        type={isLoginMode ? "text" : "email"}
-        placeholder={isLoginMode ? "Username or Email" : "Email"}
-        value={inputIdentifier}
-        onChange={(e) => setInputIdentifier(e.target.value)}
-      />
-
-      {/* Password Field */}
-      <div className="flex flex-col items-center">
-        <input
-          className="input-box"
-          type={showPassword ? "text" : "password"}
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <label className="mt-1 text-sm text-gray-700 flex items-center gap-2">
-          <input type="checkbox" checked={showPassword} onChange={() => setShowPassword(!showPassword)} />
-          Show password
-        </label>
+    <div className="login-page">
+      {/* Decorative Wordle tiles */}
+      <div className="login-tiles">
+        {"WORDLE".split("").map((letter, i) => (
+          <div key={i} className={`cell login-tile ${TILE_COLORS[i]}`}>
+            {letter}
+          </div>
+        ))}
       </div>
 
-      {/* Confirm Password for Sign Up */}
-      {!isLoginMode && (
-        <div className="flex flex-col items-center">
-          <input
-            className="input-box"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-          <label className="mt-1 text-sm text-gray-700 flex items-center gap-2">
-            <input type="checkbox" checked={showConfirmPassword} onChange={() => setShowConfirmPassword(!showConfirmPassword)} />
-            Show confirm password
-          </label>
+      <div className="login-card">
+        <h1 className="title">{isLoginMode ? "Welcome Back" : "Join Wordle"}</h1>
+        <p className="login-subtitle">
+          {isLoginMode ? "Sign in to continue playing" : "Create an account to start guessing"}
+        </p>
+
+        <div className="login-form">
+          {!isLoginMode && (
+            <div className="login-field">
+              <label className="login-label">Username</label>
+              <input
+                className="input-box login-input"
+                type="text"
+                placeholder="Choose a username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+          )}
+
+          <div className="login-field">
+            <label className="login-label">
+              {isLoginMode ? "Username or Email" : "Email"}
+            </label>
+            <input
+              className="input-box login-input"
+              type={isLoginMode ? "text" : "email"}
+              placeholder={isLoginMode ? "Enter username or email" : "Enter your email"}
+              value={inputIdentifier}
+              onChange={(e) => setInputIdentifier(e.target.value)}
+              autoComplete={isLoginMode ? "username" : "email"}
+            />
+          </div>
+
+          <div className="login-field">
+            <label className="login-label">Password</label>
+            <div className="password-wrapper">
+              <input
+                className="input-box login-input"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isLoginMode ? "current-password" : "new-password"}
+              />
+              <button
+                type="button"
+                className="show-password-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </div>
+
+          {!isLoginMode && (
+            <div className="login-field">
+              <label className="login-label">Confirm Password</label>
+              <div className="password-wrapper">
+                <input
+                  className="input-box login-input"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="show-password-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && <div className="pretty-error">{error}</div>}
+          {successMsg && <div className="pretty-success">{successMsg}</div>}
+
+          <button
+            onClick={handleAuth}
+            className="restart-button login-submit"
+            disabled={loading}
+          >
+            {loading ? "Please wait…" : isLoginMode ? "Login" : "Create Account"}
+          </button>
+
+          {needsVerification && (
+            <button onClick={handleResendVerification} className="scoreboard-button login-submit">
+              Resend verification email
+            </button>
+          )}
+
+          <button onClick={switchMode} className="login-switch-mode">
+            {isLoginMode ? "Need an account? Sign up →" : "Already have an account? Log in →"}
+          </button>
         </div>
-      )}
-
-      {error && <div className="pretty-error">{error}</div>}
-      {successMsg && <p className="win-message">{successMsg}</p>}
-
-      <button onClick={handleAuth} className="restart-button">
-        {isLoginMode ? "Login" : "Create Account"}
-      </button>
-
-      {/* Shown after a failed login due to unverified email */}
-      {needsVerification && (
-        <button onClick={handleResendVerification} className="scoreboard-button">
-          Resend verification email
-        </button>
-      )}
-
-      <button
-        onClick={() => {
-          setIsLoginMode(!isLoginMode);
-          setError("");
-          setSuccessMsg("");
-          setNeedsVerification(false);
-        }}
-        className="scoreboard-button"
-      >
-        {isLoginMode ? "Need an account? Sign Up" : "Already have an account? Login"}
-      </button>
+      </div>
     </div>
   );
 }

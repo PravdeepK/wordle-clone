@@ -180,6 +180,188 @@ html.dark .win-message {
   font-weight: 500;
   font-size: 0.95rem;
   max-width: 320px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.pretty-success {
+  background-color: #e6f4ea;
+  color: #1a6e31;
+  padding: 10px 16px;
+  border-left: 5px solid #34a853;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+html.dark .pretty-error {
+  background-color: #3b1a1a;
+  color: #ff8080;
+  border-color: #cc3333;
+}
+
+html.dark .pretty-success {
+  background-color: #1a3b22;
+  color: #7dce94;
+  border-color: #2e7d46;
+}
+
+/* ─── Login Page ─────────────────────────────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 50%, #e8f0fe 100%);
+}
+
+html.dark .login-page {
+  background: linear-gradient(135deg, #0d1b2a 0%, #121212 50%, #0d1b2a 100%);
+}
+
+.login-tiles {
+  display: flex;
+  gap: 6px;
+}
+
+.login-tile {
+  width: 44px;
+  height: 44px;
+  font-size: 1.3rem;
+  border: none;
+}
+
+.login-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+html.dark .login-card {
+  background: #1e1e1e;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.login-subtitle {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+html.dark .login-subtitle {
+  color: #999;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.login-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  text-align: left;
+}
+
+html.dark .login-label {
+  color: #bbb;
+}
+
+.login-input {
+  width: 100%;
+  margin-top: 0;
+  box-sizing: border-box;
+}
+
+/* Password field with inline show/hide button */
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-wrapper .login-input {
+  padding-right: 44px;
+}
+
+.show-password-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.show-password-btn:hover {
+  opacity: 1;
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  font-size: 1rem;
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-switch-mode {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: center;
+  transition: color 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-switch-mode:hover {
+  color: #0056b3;
+}
+
+html.dark .login-switch-mode {
+  color: #00aaff;
+}
+
+html.dark .login-switch-mode:hover {
+  color: #66ccff;
 }
 
 /* ─── Dark-mode pill toggle ──────────────────────────────────────────────── */
