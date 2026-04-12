@@ -28,25 +28,20 @@ interface GameEntry {
 
 export default function Scoreboard() {
   const router = useRouter();
+  const [uid, setUid] = useState<string | null>(null);
   const [games, setGames] = useState<GameEntry[]>([]);
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [resultFilter, setResultFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
 
-  const fetchAllGames = async () => {
-    const user = auth.currentUser;
-    if (!user?.displayName) {
-      router.push("/login");
-      return;
-    }
-    const username = user.displayName;
+  const fetchAllGames = async (userId: string) => {
     const allGames: GameEntry[] = [];
 
     // solo 3–10
     for (let i = 3; i <= 10; i++) {
       const snap = await getDocs(
         query(
-          collection(db, "users", username, "games", i.toString(), "entries"),
+          collection(db, "users", userId, "games", i.toString(), "entries"),
           orderBy("timestamp", "desc")
         )
       );
@@ -58,7 +53,7 @@ export default function Scoreboard() {
     {
       const snap = await getDocs(
         query(
-          collection(db, "users", username, "games", "custom", "entries"),
+          collection(db, "users", userId, "games", "custom", "entries"),
           orderBy("timestamp", "desc")
         )
       );
@@ -70,7 +65,7 @@ export default function Scoreboard() {
     {
       const snap = await getDocs(
         query(
-          collection(db, "users", username, "games", "multiplayer", "entries"),
+          collection(db, "users", userId, "games", "multiplayer", "entries"),
           orderBy("timestamp", "desc")
         )
       );
@@ -83,20 +78,18 @@ export default function Scoreboard() {
   };
 
   const resetScoreboard = async () => {
-    const user = auth.currentUser;
-    if (!user?.displayName) return;
+    if (!uid) return;
     if (!confirm("Reset your scoreboard?")) return;
-    const username = user.displayName;
 
     // delete solo 3–10
     for (let i = 3; i <= 10; i++) {
       const snap = await getDocs(
-        collection(db, "users", username, "games", i.toString(), "entries")
+        collection(db, "users", uid, "games", i.toString(), "entries")
       );
       await Promise.all(
         snap.docs.map((docItem) =>
           deleteDoc(
-            doc(db, "users", username, "games", i.toString(), "entries", docItem.id)
+            doc(db, "users", uid, "games", i.toString(), "entries", docItem.id)
           )
         )
       );
@@ -104,12 +97,12 @@ export default function Scoreboard() {
     // custom
     {
       const snap = await getDocs(
-        collection(db, "users", username, "games", "custom", "entries")
+        collection(db, "users", uid, "games", "custom", "entries")
       );
       await Promise.all(
         snap.docs.map((docItem) =>
           deleteDoc(
-            doc(db, "users", username, "games", "custom", "entries", docItem.id)
+            doc(db, "users", uid, "games", "custom", "entries", docItem.id)
           )
         )
       );
@@ -117,27 +110,29 @@ export default function Scoreboard() {
     // multiplayer
     {
       const snap = await getDocs(
-        collection(db, "users", username, "games", "multiplayer", "entries")
+        collection(db, "users", uid, "games", "multiplayer", "entries")
       );
       await Promise.all(
         snap.docs.map((docItem) =>
           deleteDoc(
-            doc(db, "users", username, "games", "multiplayer", "entries", docItem.id)
+            doc(db, "users", uid, "games", "multiplayer", "entries", docItem.id)
           )
         )
       );
     }
 
-    await fetchAllGames();
+    await fetchAllGames(uid);
     alert("Scoreboard reset!");
   };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (u?.displayName) fetchAllGames();
-      else router.push("/login");
+      if (!u) { router.push("/login"); return; }
+      setUid(u.uid);
+      fetchAllGames(u.uid);
     });
     return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = games.filter((g) => {

@@ -49,6 +49,7 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
     return () => {
       ws.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sendJsonMessage = (type: string, payload?: unknown) => {
