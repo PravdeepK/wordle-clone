@@ -1,0 +1,287 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light & Dark Mode Background */
+html {
+  background-color: white;
+  color: black;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+html.dark {
+  background-color: #121212;
+  color: white;
+}
+
+/* Full-Screen Centering */
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  padding: 20px;
+  text-align: center;
+  gap: 20px;
+}
+
+/* Title Styling */
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  font-family: "Poppins", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #007bff;
+  transition: color 0.3s ease-in-out;
+}
+
+html.dark .title {
+  color: #00aaff;
+}
+
+/* Global Button Styling */
+.scoreboard-button,
+.restart-button,
+.logout-button {
+  margin-top: 6px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  background-color: #00aaff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.scoreboard-button:hover,
+.restart-button:hover,
+.logout-button:hover {
+  background-color: #828282;
+}
+
+/* Grid Layout */
+.grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.grid-row {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+/* Tile Style */
+.cell {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: 2px solid gray;
+  text-transform: uppercase;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Tile Colors */
+.bg-green-500 {
+  background-color: #6aaa64 !important;
+  color: white !important;
+}
+
+.bg-yellow-500 {
+  background-color: #c9b458 !important;
+  color: black !important;
+}
+
+.bg-gray-400 {
+  background-color: #787c7e !important;
+  color: white !important;
+}
+
+html.dark .bg-green-500 {
+  background-color: #538d4e !important;
+}
+
+html.dark .bg-yellow-500 {
+  background-color: #b59f3b !important;
+}
+
+html.dark .bg-gray-400 {
+  background-color: #3a3a3c !important;
+}
+
+/* Input Box */
+.input-box {
+  margin-top: 20px;
+  padding: 8px;
+  border: 2px solid black;
+  font-size: 1rem;
+  color: black;
+  text-align: center;
+  width: 220px;
+  border-radius: 5px;
+  background-color: white;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+html.dark .input-box {
+  background-color: #222;
+  color: white;
+  border-color: white;
+}
+
+/* Error Message */
+.error-message {
+  color: red;
+  margin-top: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+/* Game Over Message */
+.game-over {
+  font-size: 1.2rem;
+  margin-top: 10px;
+  color: red;
+}
+
+.win-message {
+  color: green;
+  font-weight: bold;
+}
+
+html.dark .win-message {
+  color: #00ff00;
+}
+
+/* Dark Mode Toggle */
+.dark-mode-switch {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+/* Virtual Keyboard */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 12px;
+  gap: 4px;
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.key {
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-radius: 5px;
+  border: none;
+  background-color: #a0a0a0;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  width: 35px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.large-key {
+  width: 60px;
+}
+
+html.dark .key {
+  background-color: white;
+  color: black;
+}
+
+/* Pretty Firebase Error Box */
+.pretty-error {
+  background-color: #ffe6e6;
+  color: #b30000;
+  padding: 10px 16px;
+  border-left: 5px solid #ff4d4d;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin-top: 10px;
+  max-width: 320px;
+}
+
+.active-button {
+  background-color: #002955 !important;
+  color: white !important;
+}
+
+html.dark .active-button {
+  background-color: #00aaff !important;
+  color: black !important;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 640px) {
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .scoreboard-button,
+  .restart-button,
+  .logout-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .input-box {
+    width: 180px;
+    padding: 6px;
+    font-size: 0.9rem;
+  }
+
+  .cell {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .key {
+    width: 30px;
+    height: 36px;
+    font-size: 0.75rem;
+    padding: 6px 8px;
+  }
+
+  .large-key {
+    width: 50px;
+  }
+
+  .grid {
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .keyboard {
+    margin-top: 6px;
+    gap: 3px;
+  }
+}
