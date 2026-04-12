@@ -43,6 +43,7 @@ export default function CustomChallengePage() {
       }
     });
     return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const saveResult = async (result: string) => {
