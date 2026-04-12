@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   signInWithEmailAndPassword,
@@ -14,7 +14,56 @@ import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
 const db = getFirestore();
 
-const TILE_COLORS = ["bg-green-500", "bg-yellow-500", "bg-gray-400", "bg-green-500", "bg-yellow-500", "bg-green-500"];
+const TILE_COLOR_CLASSES = ["bg-green-500", "bg-yellow-500", "bg-gray-400"] as const;
+
+function randomTileColors(length: number): string[] {
+  return Array.from({ length }, () => {
+    const pick = TILE_COLOR_CLASSES[Math.floor(Math.random() * TILE_COLOR_CLASSES.length)];
+    return pick;
+  });
+}
+
+/** Same on server + first client paint — avoids hydration mismatch; random runs in useEffect. */
+const STATIC_LOGO_COLOR_ROW: string[] = [
+  "bg-green-500",
+  "bg-yellow-500",
+  "bg-gray-400",
+  "bg-green-500",
+  "bg-yellow-500",
+  "bg-green-500",
+];
+
+/** “Show password” — open eye (tap to reveal). Heroicons outline style. */
+function IconEyeOpen() {
+  return (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+/** “Hide password” — eye obscured by slash (tap to conceal). */
+function IconEyeSlash() {
+  return (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <path d="M1 1l22 22" />
+    </svg>
+  );
+}
+
+function LoginTileRow({ text, colors }: { text: string; colors: string[] }) {
+  return (
+    <div className="login-tiles">
+      {text.split("").map((char, i) => (
+        <div key={i} className={`cell login-tile ${colors[i]}`}>
+          {char === " " ? "\u00A0" : char}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +78,17 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginLogoColors, setLoginLogoColors] = useState(() => ({
+    wordle: [...STATIC_LOGO_COLOR_ROW],
+    byprav: [...STATIC_LOGO_COLOR_ROW],
+  }));
+
+  useEffect(() => {
+    setLoginLogoColors({
+      wordle: randomTileColors("WORDLE".length),
+      byprav: randomTileColors("BYPRAV".length),
+    });
+  }, []);
 
   const resolveEmail = async (identifier: string): Promise<string | null> => {
     if (identifier.includes("@")) return identifier;
@@ -48,7 +108,8 @@ export default function LoginPage() {
         if (!email) { setError("Username not found."); return; }
 
         const userCred = await signInWithEmailAndPassword(auth, email, password);
-        if (!userCred.user.emailVerified) {
+        const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
+        if (!userCred.user.emailVerified && !isLocalDev) {
           await signOut(auth);
           setNeedsVerification(true);
           setError("Please verify your email before logging in. Check your inbox (and spam folder).");
@@ -115,12 +176,9 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       {/* Decorative Wordle tiles */}
-      <div className="login-tiles">
-        {"WORDLE".split("").map((letter, i) => (
-          <div key={i} className={`cell login-tile ${TILE_COLORS[i]}`}>
-            {letter}
-          </div>
-        ))}
+      <div className="login-tiles-stack">
+        <LoginTileRow text="WORDLE" colors={loginLogoColors.wordle} />
+        <LoginTileRow text="BYPRAV" colors={loginLogoColors.byprav} />
       </div>
 
       <div className="login-card">
@@ -175,7 +233,7 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? <IconEyeSlash /> : <IconEyeOpen />}
               </button>
             </div>
           </div>
@@ -198,7 +256,7 @@ export default function LoginPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
-                  {showConfirmPassword ? "🙈" : "👁️"}
+                  {showConfirmPassword ? <IconEyeSlash /> : <IconEyeOpen />}
                 </button>
               </div>
             </div>

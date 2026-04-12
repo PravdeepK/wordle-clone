@@ -226,6 +226,13 @@ html.dark .login-page {
   background: linear-gradient(135deg, #0d1b2a 0%, #121212 50%, #0d1b2a 100%);
 }
 
+.login-tiles-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 .login-tiles {
   display: flex;
   gap: 6px;
@@ -236,6 +243,12 @@ html.dark .login-page {
   height: 44px;
   font-size: 1.3rem;
   border: none;
+}
+
+/* Header tiles only: same white lettering on yellow as on green (board tiles stay dark-on-yellow). */
+.login-tiles > .cell.bg-yellow-500 {
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .login-card {
@@ -298,6 +311,24 @@ html.dark .login-label {
   box-sizing: border-box;
 }
 
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus,
+.login-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #111 !important;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+}
+
+html.dark .login-input:-webkit-autofill,
+html.dark .login-input:-webkit-autofill:hover,
+html.dark .login-input:-webkit-autofill:focus,
+html.dark .login-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #f3f4f6 !important;
+  -webkit-box-shadow: 0 0 0 1000px #222 inset !important;
+  box-shadow: 0 0 0 1000px #222 inset !important;
+}
+
 /* Password field with inline show/hide button */
 .password-wrapper {
   position: relative;
@@ -313,18 +344,24 @@ html.dark .login-label {
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
   padding: 2px;
-  opacity: 0.6;
+  color: #374151;
+  opacity: 0.65;
   transition: opacity 0.2s;
 }
 
 .show-password-btn:hover {
   opacity: 1;
+}
+
+html.dark .show-password-btn {
+  color: #cbd5e1;
 }
 
 .login-submit {
