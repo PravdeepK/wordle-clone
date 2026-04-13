@@ -1,187 +1,554 @@
+@import url('https://fonts.googleapis.com/css2?family=Clear+Sans:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Light / Dark Mode ────────────────────────────────────────────────── */
-html {
-  background-color: white;
-  color: black;
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+/* ─────────────────────────────────────────────────────────────────
+   CSS Custom Properties — NYT Wordle colour tokens
+───────────────────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --color-bg:         #ffffff;
+  --color-bg-card:    #ffffff;
+  --color-bg-key:     #d3d6da;
+
+  /* Text */
+  --color-text:       #1a1a1b;
+  --color-text-muted: #787c7e;
+
+  /* Borders & tile states */
+  --color-tile-empty:  #d3d6da;
+  --color-tile-filled: #878a8c;
+  --color-border:      #e6e6e6;
+
+  /* Reveal colours — exact NYT tokens */
+  --color-correct:  #6aaa64;
+  --color-present:  #c9b458;
+  --color-absent:   #787c7e;
+
+  /* UI */
+  --color-danger:  #cc3333;
+  --color-success: #34a853;
+
+  /* Sizing */
+  --tile-size:     62px;
+  --tile-gap:       5px;
+  --key-height:    58px;
+  --header-height: 50px;
 }
 
 html.dark {
-  background-color: #121212;
-  color: white;
+  --color-bg:         #121213;
+  --color-bg-card:    #1e1e1e;
+  --color-bg-key:     #818384;
+
+  --color-text:       #ffffff;
+  --color-text-muted: #818384;
+
+  --color-tile-empty:  #3a3a3c;
+  --color-tile-filled: #565758;
+  --color-border:      #3a3a3c;
+
+  --color-correct: #538d4e;
+  --color-present: #b59f3b;
+  --color-absent:  #3a3a3c;
 }
 
-/* ─── Typography ─────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Base reset
+───────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Page layout
+───────────────────────────────────────────────────────────────── */
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* NYT-style sticky header */
+.game-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  max-width: 500px;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  padding: 0 12px;
+}
+
+.game-header-actions {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Scrollable content below the header */
+.game-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+  padding: 12px 16px 32px;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Typography
+───────────────────────────────────────────────────────────────── */
 .title {
-  font-size: 2.5rem;
-  font-weight: bold;
-  font-family: "Poppins", sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  color: #007bff;
-  transition: color 0.3s ease-in-out;
-}
-
-html.dark .title {
-  color: #00aaff;
+  letter-spacing: 4px;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1;
 }
 
 .welcome-text {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 500;
-  color: #444;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
-html.dark .welcome-text {
-  color: #ccc;
+/* ─────────────────────────────────────────────────────────────────
+   Difficulty slider
+───────────────────────────────────────────────────────────────── */
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
 }
 
-/* ─── Buttons ────────────────────────────────────────────────────────────── */
-.scoreboard-button,
-.restart-button,
-.logout-button {
-  margin-top: 6px;
-  padding: 6px 12px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  background-color: #00aaff;
-  color: white;
-  border: none;
+.difficulty-row input[type="range"],
+.setup-range-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 140px;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
   cursor: pointer;
-  border-radius: 8px;
-  transition: background-color 0.3s ease-in-out;
+  accent-color: var(--color-text);
+}
+
+.difficulty-row input[type="range"]::-webkit-slider-thumb,
+.setup-range-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: var(--color-text);
+  cursor: pointer;
+}
+
+.difficulty-row input[type="range"]::-moz-range-thumb,
+.setup-range-row input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text);
+  cursor: pointer;
+  border: none;
+}
+
+.difficulty-row input[type="range"]::-webkit-slider-runnable-track,
+.setup-range-row input[type="range"]::-webkit-slider-runnable-track {
+  border-radius: 2px;
+  height: 4px;
+}
+
+/* ── Setup panel ── */
+.setup-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0 4px;
+  width: 100%;
+}
+
+.setup-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+
+.setup-length-number {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text);
+  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+}
+
+.setup-range-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.setup-start-btn {
+  min-width: 160px;
+}
+
+/* ── Playing meta bar ── */
+.playing-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.change-length-link {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 3px 9px;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.change-length-link:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+/* ── Compact game nav ── */
+.game-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 16px;
+  row-gap: 6px;
+  padding: 10px 0 4px;
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+  max-width: 500px;
+  margin-top: 6px;
+}
+
+.game-nav-btn {
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.game-nav-btn:hover {
+  color: var(--color-text);
+}
+
+.game-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.game-nav-btn--primary {
+  color: var(--color-text);
+}
+
+.game-nav-btn--danger {
+  color: var(--color-danger);
+}
+
+.game-nav-btn--danger:hover {
+  opacity: 0.75;
+  color: var(--color-danger);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Buttons
+───────────────────────────────────────────────────────────────── */
+.scoreboard-button,
+.restart-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background-color: var(--color-text);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 0;
 }
 
 .scoreboard-button:hover,
 .restart-button:hover {
-  background-color: #828282;
+  opacity: 0.8;
+}
+
+.scoreboard-button:disabled,
+.restart-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .logout-button {
-  background-color: #cc3333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background-color: var(--color-danger);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
 
 .logout-button:hover {
-  background-color: #991111;
+  opacity: 0.85;
 }
 
+/* Active/selected filter button */
 .active-button {
-  background-color: #002955 !important;
-  color: white !important;
+  background-color: var(--color-text) !important;
+  color: var(--color-bg) !important;
+  border-color: var(--color-text) !important;
+  opacity: 1 !important;
 }
 
-html.dark .active-button {
-  background-color: #00aaff !important;
-  color: black !important;
-}
-
-/* ─── Grid ───────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Grid & Tiles
+───────────────────────────────────────────────────────────────── */
 .grid {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  margin-top: 8px;
+  gap: var(--tile-gap);
+  overflow-x: auto;
+  width: 100%;
 }
 
 .grid-row {
   display: flex;
-  gap: 5px;
+  gap: var(--tile-gap);
   justify-content: center;
+  transition: gap 0.25s ease;
 }
 
-/* ─── Tiles ──────────────────────────────────────────────────────────────── */
+/* Invalid word — shake the row */
+.grid-row--shake {
+  animation: shake 0.5s ease;
+}
+
+/* Win — bounce each tile with staggered delays */
+.grid-row--bounce .cell:nth-child(1) { animation: bounce 0.6s ease 0.0s forwards; }
+.grid-row--bounce .cell:nth-child(2) { animation: bounce 0.6s ease 0.1s forwards; }
+.grid-row--bounce .cell:nth-child(3) { animation: bounce 0.6s ease 0.2s forwards; }
+.grid-row--bounce .cell:nth-child(4) { animation: bounce 0.6s ease 0.3s forwards; }
+.grid-row--bounce .cell:nth-child(5) { animation: bounce 0.6s ease 0.4s forwards; }
+
 .cell {
-  width: 38px;
-  height: 38px;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-  font-weight: bold;
-  border: 2px solid gray;
+  font-size: 1.75rem;
+  font-weight: 700;
+  border: 2px solid var(--color-tile-empty);
   text-transform: uppercase;
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  user-select: none;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  transition: width 0.25s ease, height 0.25s ease, border-color 0.05s;
 }
 
-/* Override Tailwind tile colours so dark-mode variants work cleanly */
+/* A tile in the active row that has a letter typed */
+.cell--filled {
+  border-color: var(--color-tile-filled);
+  animation: pop 0.1s ease;
+}
+
+/* Phase 1: tile rotates forward until invisible (0deg → -90deg) */
+.cell--flip-in {
+  animation: flipIn 250ms ease-in forwards;
+}
+
+/* Phase 2: tile rotates back into view showing the new colour (-90deg → 0deg) */
+.cell--flip-out {
+  animation: flipOut 250ms ease-out both;
+}
+
+/* Revealed colours */
 .bg-green-500 {
-  background-color: #6aaa64 !important;
-  color: white !important;
-  border-color: #6aaa64 !important;
+  background-color: var(--color-correct) !important;
+  border-color:     var(--color-correct) !important;
+  color: #fff !important;
 }
 
 .bg-yellow-500 {
-  background-color: #c9b458 !important;
-  color: black !important;
-  border-color: #c9b458 !important;
+  background-color: var(--color-present) !important;
+  border-color:     var(--color-present) !important;
+  color: #fff !important;
 }
 
 .bg-gray-400 {
-  background-color: #787c7e !important;
-  color: white !important;
-  border-color: #787c7e !important;
+  background-color: var(--color-absent) !important;
+  border-color:     var(--color-absent) !important;
+  color: #fff !important;
 }
 
-html.dark .bg-green-500 { background-color: #538d4e !important; border-color: #538d4e !important; }
-html.dark .bg-yellow-500 { background-color: #b59f3b !important; border-color: #b59f3b !important; }
-html.dark .bg-gray-400 { background-color: #3a3a3c !important; border-color: #3a3a3c !important; }
+/* ─────────────────────────────────────────────────────────────────
+   Hidden input — captures keyboard on game pages
+───────────────────────────────────────────────────────────────── */
+.hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
 
-/* ─── Input ──────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Visible input — login, custom-word, multiplayer join
+───────────────────────────────────────────────────────────────── */
 .input-box {
-  padding: 8px;
-  border: 2px solid black;
+  padding: 12px 16px;
+  border: 2px solid var(--color-tile-filled);
   font-size: 1rem;
-  color: black;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--color-text);
+  background-color: var(--color-bg);
   text-align: center;
-  width: 220px;
-  border-radius: 5px;
-  background-color: white;
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  width: 240px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s, background-color 0.2s;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-html.dark .input-box {
-  background-color: #222;
-  color: white;
-  border-color: white;
+.input-box:focus {
+  border-color: var(--color-text);
 }
 
-/* ─── Messages ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Messages
+───────────────────────────────────────────────────────────────── */
 .error-message {
-  color: red;
-  font-size: 1rem;
-  font-weight: bold;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .game-over {
-  font-size: 1.2rem;
-  color: red;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-danger);
+  text-align: center;
+  letter-spacing: 0.05em;
 }
 
 .win-message {
-  color: green;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-correct);
+  text-align: center;
+  letter-spacing: 0.05em;
 }
 
 html.dark .win-message {
-  color: #00ff00;
+  color: #6aaa64;
 }
 
-/* Pretty Firebase error box */
+/* Form feedback boxes */
 .pretty-error {
   background-color: #ffe6e6;
   color: #b30000;
   padding: 10px 16px;
-  border-left: 5px solid #ff4d4d;
-  border-radius: 8px;
+  border-left: 4px solid #ff4d4d;
+  border-radius: 4px;
   font-weight: 500;
-  font-size: 0.95rem;
-  max-width: 320px;
+  font-size: 0.9rem;
+  max-width: 360px;
   width: 100%;
-  box-sizing: border-box;
   text-align: left;
 }
 
@@ -189,19 +556,18 @@ html.dark .win-message {
   background-color: #e6f4ea;
   color: #1a6e31;
   padding: 10px 16px;
-  border-left: 5px solid #34a853;
-  border-radius: 8px;
+  border-left: 4px solid var(--color-success);
+  border-radius: 4px;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   width: 100%;
-  box-sizing: border-box;
   text-align: left;
 }
 
 html.dark .pretty-error {
   background-color: #3b1a1a;
   color: #ff8080;
-  border-color: #cc3333;
+  border-color: var(--color-danger);
 }
 
 html.dark .pretty-success {
@@ -210,7 +576,9 @@ html.dark .pretty-success {
   border-color: #2e7d46;
 }
 
-/* ─── Login Page ─────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Login page
+───────────────────────────────────────────────────────────────── */
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -219,64 +587,53 @@ html.dark .pretty-success {
   justify-content: center;
   gap: 24px;
   padding: 24px 16px;
-  background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 50%, #e8f0fe 100%);
-}
-
-html.dark .login-page {
-  background: linear-gradient(135deg, #0d1b2a 0%, #121212 50%, #0d1b2a 100%);
+  background-color: var(--color-bg);
 }
 
 .login-tiles-stack {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .login-tiles {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .login-tile {
   width: 44px;
   height: 44px;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   border: none;
+  border-radius: 2px;
 }
 
-/* Header tiles only: same white lettering on yellow as on green (board tiles stay dark-on-yellow). */
-.login-tiles > .cell.bg-yellow-500 {
+/* Header tiles: white text on both green and yellow */
+.login-tiles > .cell.bg-yellow-500,
+.login-tiles > .cell.bg-green-500 {
   color: #fff !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .login-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
   padding: 36px 32px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
-html.dark .login-card {
-  background: #1e1e1e;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-}
-
 .login-subtitle {
-  font-size: 0.95rem;
-  color: #666;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
   margin-bottom: 8px;
-}
-
-html.dark .login-subtitle {
-  color: #999;
+  text-align: center;
 }
 
 .login-form {
@@ -295,124 +652,106 @@ html.dark .login-subtitle {
 }
 
 .login-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #444;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
   text-align: left;
-}
-
-html.dark .login-label {
-  color: #bbb;
 }
 
 .login-input {
   width: 100%;
   margin-top: 0;
   box-sizing: border-box;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
 }
 
+/* Autofill overrides */
 .login-input:-webkit-autofill,
 .login-input:-webkit-autofill:hover,
 .login-input:-webkit-autofill:focus,
 .login-input:-webkit-autofill:active {
-  -webkit-text-fill-color: #111 !important;
-  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
-  box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg) inset !important;
+  box-shadow:         0 0 0 1000px var(--color-bg) inset !important;
 }
 
-html.dark .login-input:-webkit-autofill,
-html.dark .login-input:-webkit-autofill:hover,
-html.dark .login-input:-webkit-autofill:focus,
-html.dark .login-input:-webkit-autofill:active {
-  -webkit-text-fill-color: #f3f4f6 !important;
-  -webkit-box-shadow: 0 0 0 1000px #222 inset !important;
-  box-shadow: 0 0 0 1000px #222 inset !important;
-}
-
-/* Password field with inline show/hide button */
+/* Password wrapper */
 .password-wrapper {
   position: relative;
   width: 100%;
 }
 
 .password-wrapper .login-input {
-  padding-right: 44px;
+  padding-right: 48px;
 }
 
 .show-password-btn {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
   padding: 2px;
-  color: #374151;
-  opacity: 0.65;
-  transition: opacity 0.2s;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
 }
 
 .show-password-btn:hover {
   opacity: 1;
 }
 
-html.dark .show-password-btn {
-  color: #cbd5e1;
-}
-
 .login-submit {
   width: 100%;
   margin-top: 4px;
-  padding: 10px;
-  font-size: 1rem;
+  padding: 12px;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
 }
 
 .login-submit:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .login-switch-mode {
   background: none;
   border: none;
-  color: #007bff;
-  font-size: 0.9rem;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
   padding: 4px 0;
   text-align: center;
-  transition: color 0.2s;
   text-decoration: underline;
   text-underline-offset: 3px;
+  transition: color 0.15s;
 }
 
 .login-switch-mode:hover {
-  color: #0056b3;
+  color: var(--color-text-muted);
 }
 
-html.dark .login-switch-mode {
-  color: #00aaff;
-}
-
-html.dark .login-switch-mode:hover {
-  color: #66ccff;
-}
-
-/* ─── Dark-mode pill toggle ──────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Dark-mode pill toggle
+───────────────────────────────────────────────────────────────── */
 .dark-mode-switch {
-  position: absolute;
-  top: 20px;
-  right: 20px;
   display: inline-block;
   width: 50px;
   height: 26px;
   cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
 }
 
-/* Hide the real checkbox */
 .dark-mode-switch input {
   opacity: 0;
   width: 0;
@@ -420,16 +759,14 @@ html.dark .login-switch-mode:hover {
   position: absolute;
 }
 
-/* The track */
 .slider {
   position: absolute;
   inset: 0;
-  background-color: #ccc;
+  background-color: var(--color-tile-empty);
   border-radius: 26px;
-  transition: background-color 0.3s ease-in-out;
+  transition: background-color 0.2s;
 }
 
-/* The knob */
 .slider::before {
   position: absolute;
   content: "";
@@ -438,109 +775,354 @@ html.dark .login-switch-mode:hover {
   left: 4px;
   top: 50%;
   transform: translateY(-50%);
-  background-color: white;
+  background-color: #fff;
   border-radius: 50%;
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.2s;
 }
 
-/* Checked state — slide knob right and turn track blue */
 .dark-mode-switch input:checked + .slider {
-  background-color: #007bff;
+  background-color: var(--color-text);
 }
 
 .dark-mode-switch input:checked + .slider::before {
   transform: translateY(-50%) translateX(24px);
 }
 
-/* ─── Virtual Keyboard ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   Virtual keyboard
+───────────────────────────────────────────────────────────────── */
 .keyboard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 12px;
-  gap: 4px;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+  padding: 0 8px;
 }
 
 .keyboard-row {
   display: flex;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
+  width: 100%;
 }
 
 .key {
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  border-radius: 5px;
-  border: none;
-  background-color: #a0a0a0;
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-  width: 35px;
-  height: 42px;
+  height: var(--key-height);
+  flex: 1;
+  min-width: 43px;
+  max-width: 43px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 4px;
+  border: none;
+  background-color: var(--color-bg-key);
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.1s;
+}
+
+.key:hover {
+  filter: brightness(0.9);
+}
+
+.key:active {
+  filter: brightness(0.75);
 }
 
 .key:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .large-key {
-  width: 60px;
+  min-width: 65px;
+  max-width: 65px;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
 }
 
-html.dark .key {
-  background-color: #818384;
-  color: white;
+/* Keys coloured to match tile reveals */
+.key.bg-green-500  { background-color: var(--color-correct) !important; color: #fff !important; }
+.key.bg-yellow-500 { background-color: var(--color-present) !important; color: #fff !important; }
+.key.bg-gray-400   { background-color: var(--color-absent)  !important; color: #fff !important; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Scoreboard page
+───────────────────────────────────────────────────────────────── */
+.scoreboard-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  width: 100%;
+  max-width: 500px;
 }
 
-/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+.scoreboard-list {
+  width: 100%;
+  max-width: 500px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scoreboard-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+}
+
+.scoreboard-item--win  { border-left: 4px solid var(--color-correct); }
+.scoreboard-item--loss { border-left: 4px solid var(--color-danger);  }
+
+.scoreboard-word {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Multiplayer page
+───────────────────────────────────────────────────────────────── */
+.multiplayer-lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 16px;
+}
+
+.room-id-join {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.room-id-join .input-box {
+  width: 100%;
+}
+
+.room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  background-color: var(--color-tile-empty);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.multiplayer-boards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+/* Each board's grid gets smaller tiles when side-by-side */
+.multiplayer-board-grid {
+  --tile-size: 52px;
+}
+
+@media (min-width: 700px) {
+  .multiplayer-boards {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  /* Side-by-side: shrink tiles to fit both boards */
+  .multiplayer-board-grid {
+    --tile-size: 40px;
+  }
+}
+
+.board-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Custom word challenge page
+───────────────────────────────────────────────────────────────── */
+.challenge-link-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  width: 100%;
+  max-width: 420px;
+  word-break: break-all;
+  font-size: 0.85rem;
+  background-color: var(--color-bg-card);
+}
+
+.challenge-link-box a {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Animations
+───────────────────────────────────────────────────────────────── */
+
+/* Letter typed into active tile */
+@keyframes pop {
+  0%   { transform: scale(1);    }
+  50%  { transform: scale(1.12); }
+  100% { transform: scale(1);    }
+}
+
+/* Tile flip — phase 1: fold away */
+@keyframes flipIn {
+  0%   { transform: rotateX(0deg);   }
+  100% { transform: rotateX(-90deg); }
+}
+
+/* Tile flip — phase 2: unfold revealing colour */
+@keyframes flipOut {
+  0%   { transform: rotateX(-90deg); }
+  100% { transform: rotateX(0deg);   }
+}
+
+/* Invalid word */
+@keyframes shake {
+  0%, 100% { transform: translateX(0);    }
+  10%       { transform: translateX(-6px); }
+  30%       { transform: translateX(6px);  }
+  50%       { transform: translateX(-4px); }
+  70%       { transform: translateX(4px);  }
+  90%       { transform: translateX(-2px); }
+}
+
+/* Win bounce */
+@keyframes bounce {
+  0%   { transform: translateY(0);     }
+  40%  { transform: translateY(-30px); }
+  60%  { transform: translateY(-15px); }
+  80%  { transform: translateY(-6px);  }
+  100% { transform: translateY(0);     }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Mobile <= 640px
+───────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  :root {
+    --tile-size:  52px;
+    --key-height: 48px;
+    --header-height: 46px;
+  }
+
   .title {
-    font-size: 1.8rem;
+    font-size: 1.25rem;
+    letter-spacing: 3px;
+  }
+
+  .game-content {
+    padding: 8px 10px 24px;
+    gap: 8px;
+  }
+
+  .login-card {
+    padding: 28px 20px;
+  }
+
+  .key {
+    min-width: 30px;
+    max-width: 30px;
+    font-size: 0.68rem;
+  }
+
+  .large-key {
+    min-width: 44px;
+    max-width: 44px;
+    font-size: 0.6rem;
+  }
+
+  .keyboard-row {
+    gap: 4px;
+  }
+
+  .keyboard {
+    padding: 0 2px;
+    gap: 6px;
   }
 
   .scoreboard-button,
   .restart-button,
   .logout-button {
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    padding: 9px 14px;
+    font-size: 0.75rem;
   }
 
-  .input-box {
-    width: 180px;
-    padding: 6px;
-    font-size: 0.9rem;
+  .setup-length-number {
+    font-size: 3.5rem;
   }
 
-  .cell {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
+  .game-nav {
+    column-gap: 12px;
+  }
+
+  .game-nav-btn {
+    font-size: 0.65rem;
+  }
+
+  .welcome-text {
+    font-size: 0.78rem;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Extra-small (iPhone SE, 375px and below)
+───────────────────────────────────────────────────────────────── */
+@media (max-width: 380px) {
+  :root {
+    --tile-size: 44px;
   }
 
   .key {
-    width: 30px;
-    height: 36px;
-    font-size: 0.75rem;
-    padding: 6px 8px;
+    min-width: 26px;
+    max-width: 26px;
   }
 
   .large-key {
-    width: 50px;
-  }
-
-  .grid {
-    gap: 4px;
-    margin-top: 6px;
-  }
-
-  .keyboard {
-    margin-top: 6px;
-    gap: 3px;
+    min-width: 40px;
+    max-width: 40px;
   }
 }

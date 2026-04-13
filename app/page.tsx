@@ -8,6 +8,7 @@ import { getFirestore, collection, addDoc } from "firebase/firestore";
 import { checkGuess } from "../lib/wordle";
 import { validateWord } from "../lib/validateWord";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useGlobalGuessKeyboard } from "../hooks/useGlobalGuessKeyboard";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 
 const db = getFirestore();
@@ -24,15 +25,22 @@ export default function Home() {
 
   const [username, setUsername] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"setup" | "playing">("setup");
+  const [pendingDifficulty, setPendingDifficulty] = useState(5);
   const [difficulty, setDifficulty] = useState(5);
   const [guesses, setGuesses] = useState<string[]>(Array(MAX_TRIES).fill(""));
   const [currentGuess, setCurrentGuess] = useState("");
   const [secretWord, setSecretWord] = useState("");
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
+  const [shakeRow, setShakeRow] = useState<number | null>(null);
+  const [winRow, setWinRow] = useState<number | null>(null);
+  // tileReveal[rowIndex][colIndex] = colour class — revealed one at a time during flip
+  const [tileReveal, setTileReveal] = useState<Record<number, string[]>>({});
+  const [animatingRow, setAnimatingRow] = useState<number | null>(null);
 
   useEffect(() => {
     const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
@@ -50,10 +58,18 @@ export default function Home() {
     return () => unsub();
   }, [router]);
 
-  useEffect(() => {
-    if (uid) fetchWord();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [difficulty, uid]);
+  const resetBoardState = () => {
+    setGuesses(Array(MAX_TRIES).fill(""));
+    setKeyStatuses({});
+    setGameOver(false);
+    setWon(false);
+    setWinRow(null);
+    setShakeRow(null);
+    setCurrentGuess("");
+    setErrorMessage("");
+    setTileReveal({});
+    setAnimatingRow(null);
+  };
 
   const saveGameResult = async (result: string) => {
     if (!uid || !secretWord) return;
@@ -67,79 +83,136 @@ export default function Home() {
     }
   };
 
-  const fetchWord = async (attempt = 1) => {
+  /** Fetches a word for `wordLength` (defaults to current `difficulty`). Returns whether a word is ready to play. */
+  const fetchWord = async (wordLength?: number): Promise<boolean> => {
+    const len = wordLength ?? difficulty;
     setLoading(true);
     setErrorMessage("");
-    try {
-      const res = await fetch("/api/word", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ length: difficulty }),
-      });
-      if (!res.ok) throw new Error("Bad response");
-      const data = await res.json();
-      if (!data.word || data.word.length !== difficulty) {
-        if (attempt < 3) return fetchWord(attempt + 1);
-        setSecretWord(fallbacks[difficulty] ?? "STONE");
-        setGuesses(Array(MAX_TRIES).fill(""));
-        setKeyStatuses({});
-        setGameOver(false);
-        setWon(false);
-        setCurrentGuess("");
-        return;
+    let success = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch("/api/word", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ length: len }),
+        });
+        if (!res.ok) throw new Error("Bad response");
+        const data = await res.json();
+        if (data.word && data.word.length === len) {
+          setSecretWord(data.word.toUpperCase());
+          resetBoardState();
+          success = true;
+          break;
+        }
+        if (attempt === 3) {
+          setSecretWord((fallbacks[len] ?? "STONE").toUpperCase());
+          resetBoardState();
+          success = true;
+          break;
+        }
+      } catch {
+        if (attempt === 3) {
+          setErrorMessage("Could not load a word. Please refresh.");
+        }
       }
-      setSecretWord(data.word.toUpperCase());
-      setGuesses(Array(MAX_TRIES).fill(""));
-      setKeyStatuses({});
-      setGameOver(false);
-      setWon(false);
-      setCurrentGuess("");
-    } catch {
-      if (attempt < 3) return fetchWord(attempt + 1);
-      setErrorMessage("Could not load a word. Please refresh.");
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
+    return success;
+  };
+
+  const handleStartGame = async () => {
+    setDifficulty(pendingDifficulty);
+    const ok = await fetchWord(pendingDifficulty);
+    if (ok) setPhase("playing");
+  };
+
+  const handleChangeLength = () => {
+    const midGame = phase === "playing" && secretWord && !gameOver && guesses.some((g) => g !== "");
+    if (midGame && !window.confirm("Abandon this game and pick a new word length?")) return;
+    setPhase("setup");
+    setPendingDifficulty(difficulty);
+    setSecretWord("");
+    resetBoardState();
   };
 
   const handleKeyPress = async (e: { key: string }) => {
-    if (gameOver) return;
+    if (gameOver || animatingRow !== null) return;
     if (e.key !== "Enter" || currentGuess.length !== difficulty) return;
 
     setErrorMessage("");
     if (!(await validateWord(currentGuess))) {
       setErrorMessage("Not a valid word! Please enter a real word.");
+      const currentRow = guesses.filter((g) => g !== "").length;
+      setShakeRow(currentRow);
+      setTimeout(() => setShakeRow(null), 600);
       return;
     }
 
     const newGuesses = [...guesses];
     const nextRow = newGuesses.findIndex((r) => r === "");
-    if (nextRow !== -1) {
-      newGuesses[nextRow] = currentGuess;
-      setGuesses(newGuesses);
+    if (nextRow === -1) return;
 
-      const colors = checkGuess(currentGuess, secretWord);
-      const newKeyStatuses = { ...keyStatuses };
-      currentGuess.split("").forEach((letter, i) => {
-        const c = colors[i];
-        if (c.includes("green") || (c.includes("yellow") && newKeyStatuses[letter] !== "bg-green-500 text-white")) {
-          newKeyStatuses[letter] = c;
-        } else if (!newKeyStatuses[letter]) {
-          newKeyStatuses[letter] = c;
-        }
-      });
-      setKeyStatuses(newKeyStatuses);
-    }
-
-    if (currentGuess === secretWord) {
-      await saveGameResult("win");
-      setWon(true);
-      setGameOver(true);
-    } else if (newGuesses.filter((g) => g !== "").length >= MAX_TRIES) {
-      await saveGameResult("lose");
-      setGameOver(true);
-    }
+    newGuesses[nextRow] = currentGuess;
+    setGuesses(newGuesses);
     setCurrentGuess("");
+
+    const colors = checkGuess(currentGuess, secretWord);
+
+    // ── Two-phase NYT flip ──────────────────────────────────────────
+    const FLIP_IN  = 250;  // ms — tile folds away
+    const STAGGER  = 300;  // ms — delay between each tile
+    const FLIP_OUT = 250;  // ms — tile unfolds showing colour
+    const BUFFER   = 20;   // ms — small safety margin
+
+    setAnimatingRow(nextRow);
+
+    // Reveal each tile's colour at the moment it's edge-on (invisible)
+    colors.forEach((colorClass, i) => {
+      setTimeout(() => {
+        setTileReveal(prev => {
+          const rowArr = [...(prev[nextRow] ?? Array(difficulty).fill(""))];
+          rowArr[i] = colorClass;
+          return { ...prev, [nextRow]: rowArr };
+        });
+      }, i * STAGGER + FLIP_IN + BUFFER);
+    });
+
+    // Total time until the last tile's flip-out completes
+    const flipDone = (colors.length - 1) * STAGGER + FLIP_IN + FLIP_OUT + BUFFER * 2;
+
+    setTimeout(() => setAnimatingRow(null), flipDone);
+
+    // Update keyboard colours after animation
+    setTimeout(() => {
+      setKeyStatuses(prev => {
+        const next = { ...prev };
+        currentGuess.split("").forEach((letter, i) => {
+          const c = colors[i];
+          if (c.includes("green") || (c.includes("yellow") && next[letter] !== "bg-green-500 text-white")) {
+            next[letter] = c;
+          } else if (!next[letter]) {
+            next[letter] = c;
+          }
+        });
+        return next;
+      });
+    }, flipDone);
+
+    // Delay win/lose state until after the last tile flips
+    const guessCount = newGuesses.filter((g) => g !== "").length;
+    if (currentGuess === secretWord) {
+      setTimeout(async () => {
+        await saveGameResult("win");
+        setWon(true);
+        setGameOver(true);
+        setWinRow(nextRow);
+      }, flipDone);
+    } else if (guessCount >= MAX_TRIES) {
+      setTimeout(async () => {
+        await saveGameResult("lose");
+        setGameOver(true);
+      }, flipDone);
+    }
   };
 
   const handleVirtualKey = async (key: string) => {
@@ -149,81 +222,168 @@ export default function Home() {
     else if (currentGuess.length < difficulty) setCurrentGuess((p) => p + key);
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
+  useGlobalGuessKeyboard({
+    enabled: phase === "playing" && !gameOver && !loading,
+    maxLength: difficulty,
+    setCurrentGuess,
+    onEnter: () => handleKeyPress({ key: "Enter" }),
+  });
+
   if (!username) return null;
 
+  const gridLength = phase === "setup" ? pendingDifficulty : difficulty;
+  const tileSize = Math.min(62, Math.floor((460 - (gridLength - 1) * 5) / gridLength));
+
   return (
-    <div className="flex flex-col justify-start items-center min-h-screen w-full text-center gap-3 px-2">
-      <h1 className="title">Wordle Clone</h1>
-      <p className="welcome-text">Welcome, {username}!</p>
+    <div className="page-wrapper">
 
-      <div className="flex items-center gap-4">
-        <label>Difficulty: {difficulty} letters</label>
-        <input
-          type="range"
-          min="3"
-          max="10"
-          value={difficulty}
-          onChange={(e) => setDifficulty(parseInt(e.target.value))}
-        />
-      </div>
+      {/* Sticky Header */}
+      <header className="game-header">
+        <h1 className="title">Wordle</h1>
+        <div className="game-header-actions">
+          <label className="dark-mode-switch" aria-label="Toggle dark mode">
+            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+            <span className="slider" />
+          </label>
+        </div>
+      </header>
 
-      <label className="dark-mode-switch">
-        <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
-        <span className="slider"></span>
-      </label>
+      {/* Main Content */}
+      <div className="game-content">
+        <p className="welcome-text">Welcome, {username}</p>
 
-      <div className="grid">
-        {guesses.map((guess, rowIndex) => {
-          const tileColors = guess
-            ? checkGuess(guess, secretWord)
-            : Array(difficulty).fill("border-gray-400");
-          return (
-            <div key={rowIndex} className="grid-row">
-              {Array.from({ length: difficulty }).map((_, colIndex) => (
-                <div key={colIndex} className={`cell ${tileColors[colIndex]}`}>
-                  {guess[colIndex] || ""}
-                </div>
-              ))}
+        {phase === "setup" ? (
+          /* ── Setup screen ── */
+          <div className="setup-panel">
+            <p className="setup-label">Pick a word length</p>
+            <div className="setup-length-number">{pendingDifficulty}</div>
+            <div className="setup-range-row">
+              <span>3</span>
+              <input
+                type="range"
+                min={3}
+                max={10}
+                value={pendingDifficulty}
+                onChange={(e) => setPendingDifficulty(parseInt(e.target.value, 10))}
+                aria-label="Word length"
+                style={{
+                  background: `linear-gradient(to right, var(--color-text) 0%, var(--color-text) ${((pendingDifficulty - 3) / 7) * 100}%, var(--color-tile-empty) ${((pendingDifficulty - 3) / 7) * 100}%, var(--color-tile-empty) 100%)`,
+                }}
+              />
+              <span>10</span>
             </div>
-          );
-        })}
-      </div>
+            <button
+              type="button"
+              className="restart-button setup-start-btn"
+              disabled={loading || !uid}
+              onClick={() => void handleStartGame()}
+            >
+              {loading ? "Loading…" : "Start Game"}
+            </button>
+            {errorMessage && <p className="error-message">{errorMessage}</p>}
+          </div>
+        ) : (
+          /* ── Playing screen ── */
+          <>
+            <div className="playing-meta">
+              <span>{difficulty} letters</span>
+              <button type="button" className="change-length-link" onClick={handleChangeLength}>
+                Change
+              </button>
+            </div>
 
-      <input
-        type="text"
-        value={currentGuess}
-        onChange={(e) => setCurrentGuess(e.target.value.toUpperCase())}
-        onKeyDown={handleKeyPress}
-        className="input-box"
-        maxLength={difficulty}
-      />
+            <div className="grid" style={{ '--tile-size': `${tileSize}px` } as React.CSSProperties}>
+              {guesses.map((guess, rowIndex) => {
+                const committedCount  = guesses.filter((g) => g !== "").length;
+                const isCurrentRow    = rowIndex === committedCount && !gameOver;
+                const isAnimating     = animatingRow === rowIndex;
+                const displayGuess    = isCurrentRow ? currentGuess : guess;
+                const revealedColors  = tileReveal[rowIndex] ?? [];
 
-      <VirtualKeyboard onKey={handleVirtualKey} keyStatuses={keyStatuses} />
+                return (
+                  <div
+                    key={rowIndex}
+                    className={`grid-row ${shakeRow === rowIndex ? "grid-row--shake" : ""} ${winRow === rowIndex ? "grid-row--bounce" : ""}`}
+                  >
+                    {Array.from({ length: difficulty }).map((_, colIndex) => {
+                      const letter = displayGuess[colIndex] || "";
+                      const hasFilled = isCurrentRow && !!letter;
 
-      {errorMessage && <p className="error-message">{errorMessage}</p>}
-      {gameOver && (
-        <p className="game-over">
-          {won ? "Congrats! You guessed the word!" : `Game Over! The word was ${secretWord}`}
-        </p>
-      )}
+                      // Colour logic:
+                      // – typing row: no colour
+                      // – animating row: only show colour once tile has flipped through invisible (tileReveal)
+                      // – past row: colour from tileReveal (set during its flip), fallback to checkGuess
+                      const colorClass = isCurrentRow
+                        ? ""
+                        : isAnimating
+                        ? (revealedColors[colIndex] ?? "")
+                        : (tileReveal[rowIndex]?.[colIndex] ?? (guess ? checkGuess(guess, secretWord)[colIndex] : ""));
 
-      <div className="flex flex-col gap-1 mt-2">
-        <button
-          onClick={async () => {
-            if (!won && gameOver) await saveGameResult("lose");
-            fetchWord();
-          }}
-          className="restart-button"
-        >
-          Restart Game
-        </button>
-        <button onClick={() => router.push("/custom-word")} className="scoreboard-button">Custom Word</button>
-        <button onClick={() => router.push("/scoreboard")} className="scoreboard-button">View Scoreboard</button>
-        <button onClick={() => router.push("/multiplayer")} className="scoreboard-button">Multiplayer Mode</button>
-        <button className="logout-button" onClick={async () => { await signOut(auth); router.replace("/login"); }}>
-          Logout
-        </button>
+                      // Flip animation for the animating row
+                      let flipClass = "";
+                      let flipStyle: React.CSSProperties = {};
+                      if (isAnimating && guess) {
+                        if (!revealedColors[colIndex]) {
+                          // Phase 1: fold away — stagger each tile
+                          flipClass = "cell--flip-in";
+                          flipStyle = { animationDelay: `${colIndex * 300}ms` };
+                        } else {
+                          // Phase 2: unfold showing colour
+                          flipClass = "cell--flip-out";
+                        }
+                      }
+
+                      return (
+                        <div
+                          key={colIndex}
+                          className={`cell ${colorClass} ${hasFilled ? "cell--filled" : ""} ${flipClass}`}
+                          style={flipStyle}
+                        >
+                          {letter}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+            <input
+              type="text"
+              data-global-guess-keys
+              value={currentGuess}
+              onChange={(e) => setCurrentGuess(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, difficulty))}
+              className="hidden-input"
+              maxLength={difficulty}
+              autoFocus
+              aria-label="Type your guess"
+            />
+
+            <VirtualKeyboard onKey={handleVirtualKey} keyStatuses={keyStatuses} />
+
+            {errorMessage && <p className="error-message">{errorMessage}</p>}
+
+            {gameOver && (
+              <p className={won ? "win-message" : "game-over"}>
+                {won ? "Brilliant!" : `The word was ${secretWord}`}
+              </p>
+            )}
+          </>
+        )}
+
+        <div className="game-nav">
+          {phase === "playing" && (
+            <button className="restart-button" disabled={loading} onClick={() => void fetchWord()}>
+              New Game
+            </button>
+          )}
+          <button className="scoreboard-button" onClick={() => router.push("/custom-word")}>Custom Word</button>
+          <button className="scoreboard-button" onClick={() => router.push("/scoreboard")}>Scoreboard</button>
+          <button className="scoreboard-button" onClick={() => router.push("/multiplayer")}>Multiplayer</button>
+          <button className="logout-button" onClick={async () => { await signOut(auth); router.replace("/login"); }}>
+            Logout
+          </button>
+        </div>
       </div>
     </div>
   );

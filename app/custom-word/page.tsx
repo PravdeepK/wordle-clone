@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 const db = getFirestore();
 
 export default function CustomWordPage() {
   const [customWord, setCustomWord] = useState("");
   const [challengeLink, setChallengeLink] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
+  useDarkMode();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -21,9 +24,11 @@ export default function CustomWordPage() {
   }, [router]);
 
   const createChallenge = async () => {
+    setError("");
     const word = customWord.toUpperCase();
+
     if (word.length < 3 || word.length > 10) {
-      alert("Word must be between 3–10 letters");
+      setError("Word must be between 3\u201310 letters.");
       return;
     }
 
@@ -35,7 +40,7 @@ export default function CustomWordPage() {
       });
       const data = await response.json();
       if (!data.valid) {
-        alert("Invalid word. Not accepted.");
+        setError("That's not a valid dictionary word.");
         return;
       }
 
@@ -44,42 +49,52 @@ export default function CustomWordPage() {
         timestamp: new Date(),
       });
       setChallengeLink(`${window.location.origin}/custom-challenge/${docRef.id}`);
-    } catch (err) {
-      console.error("Challenge creation error:", err);
-      alert("Something went wrong. Please try again.");
+    } catch {
+      setError("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-5 text-center px-4">
-      <h1 className="title">Create a Custom Word Challenge</h1>
+    <div className="page-wrapper">
+      <header className="game-header">
+        <h1 className="title">Custom Challenge</h1>
+      </header>
 
-      <input
-        type="text"
-        value={customWord}
-        onChange={(e) => setCustomWord(e.target.value.toUpperCase())}
-        className="input-box"
-        placeholder="Enter custom word"
-        maxLength={10}
-      />
+      <div className="game-content">
+        <input
+          type="text"
+          value={customWord}
+          onChange={(e) => setCustomWord(e.target.value.toUpperCase())}
+          className="input-box"
+          placeholder="Enter a word"
+          maxLength={10}
+        />
 
-      <button onClick={createChallenge} className="restart-button">
-        Create Challenge
-      </button>
+        {error && <p className="error-message">{error}</p>}
 
-      {challengeLink && (
-        <>
-          <p className="text-green-400 font-semibold">Challenge Created!</p>
-          <p>Share this link:</p>
-          <a href={challengeLink} className="text-blue-400 underline" target="_blank" rel="noreferrer">
-            {challengeLink}
-          </a>
-        </>
-      )}
+        <button onClick={createChallenge} className="restart-button">
+          Create Challenge
+        </button>
 
-      <button className="scoreboard-button" onClick={() => router.push("/")}>
-        Back to Game
-      </button>
+        {challengeLink && (
+          <div className="challenge-link-box">
+            <p className="win-message">Challenge created!</p>
+            <p style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>Share this link:</p>
+            <a href={challengeLink} target="_blank" rel="noreferrer">{challengeLink}</a>
+            <button
+              className="scoreboard-button"
+              style={{ marginTop: 4 }}
+              onClick={() => navigator.clipboard.writeText(challengeLink)}
+            >
+              Copy Link
+            </button>
+          </div>
+        )}
+
+        <button className="scoreboard-button" onClick={() => router.push("/")}>
+          Back to Game
+        </button>
+      </div>
     </div>
   );
 }

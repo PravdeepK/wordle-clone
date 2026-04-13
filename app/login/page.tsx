@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../../config/firebaseConfig";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 const db = getFirestore();
 
@@ -33,7 +34,7 @@ const STATIC_LOGO_COLOR_ROW: string[] = [
   "bg-green-500",
 ];
 
-/** “Show password” — open eye (tap to reveal). Heroicons outline style. */
+/** "Show password" — open eye (tap to reveal). Heroicons outline style. */
 function IconEyeOpen() {
   return (
     <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -43,7 +44,7 @@ function IconEyeOpen() {
   );
 }
 
-/** “Hide password” — eye obscured by slash (tap to conceal). */
+/** "Hide password" — eye obscured by slash (tap to conceal). */
 function IconEyeSlash() {
   return (
     <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -67,6 +68,8 @@ function LoginTileRow({ text, colors }: { text: string; colors: string[] }) {
 
 export default function LoginPage() {
   const router = useRouter();
+  useDarkMode();
+
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [inputIdentifier, setInputIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -270,7 +273,7 @@ export default function LoginPage() {
             className="restart-button login-submit"
             disabled={loading}
           >
-            {loading ? "Please wait…" : isLoginMode ? "Login" : "Create Account"}
+            {loading ? "Please wait..." : isLoginMode ? "Login" : "Create Account"}
           </button>
 
           {needsVerification && (
@@ -280,7 +283,7 @@ export default function LoginPage() {
           )}
 
           <button onClick={switchMode} className="login-switch-mode">
-            {isLoginMode ? "Need an account? Sign up →" : "Already have an account? Log in →"}
+            {isLoginMode ? "Need an account? Sign up" : "Already have an account? Log in"}
           </button>
         </div>
       </div>
