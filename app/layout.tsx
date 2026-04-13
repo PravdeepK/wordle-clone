@@ -2,8 +2,8 @@ import "./styles.css";
 import React from "react";
 
 export const metadata = {
-  title: "Wordle Clone",
-  description: "A simple Wordle clone built with Next.js",
+  title: "Wordle",
+  description: "A Wordle clone",
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -11,11 +11,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Clear+Sans:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body style={{ margin: 0, padding: 0 }}>
-        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-          {children}
-        </div>
+      <body>
+        {children}
       </body>
     </html>
   );

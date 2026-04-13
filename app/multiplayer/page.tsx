@@ -7,14 +7,17 @@ import { auth } from "../../config/firebaseConfig";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 import { checkGuess } from "../../lib/wordle";
 import { validateWord } from "../../lib/validateWord";
+import { useDarkMode } from "../../hooks/useDarkMode";
 import VirtualKeyboard from "../../components/VirtualKeyboard";
 import useWebSocket from "./useWebSocket";
+import { useGlobalGuessKeyboard } from "../../hooks/useGlobalGuessKeyboard";
 
 const MAX_TRIES = 6;
 
 export default function MultiplayerPage() {
   const router = useRouter();
   const db = getFirestore();
+  useDarkMode();
 
   const [uid, setUid] = useState<string | null>(null);
   const [roomId, setRoomId] = useState("");
@@ -27,6 +30,9 @@ export default function MultiplayerPage() {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
+  const [joinRoomId, setJoinRoomId] = useState("");
+  const [showJoinInput, setShowJoinInput] = useState(false);
+  const [multiError, setMultiError] = useState("");
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -71,7 +77,11 @@ export default function MultiplayerPage() {
 
     if (key === "ENTER") {
       if (currentGuess.length !== 5) return;
-      if (!(await validateWord(currentGuess))) return alert("❌ Not a valid word.");
+      if (!(await validateWord(currentGuess))) {
+        setMultiError("Not a valid word.");
+        setTimeout(() => setMultiError(""), 2000);
+        return;
+      }
 
       const guessU = currentGuess.toUpperCase();
       const nextGuesses = [...guesses];
@@ -113,12 +123,19 @@ export default function MultiplayerPage() {
     }
   };
 
+  useGlobalGuessKeyboard({
+    enabled: !!roomId && !!word && !gameOver && !youDone,
+    maxLength: 5,
+    setCurrentGuess,
+    onEnter: () => void handleKey("ENTER"),
+  });
+
   const renderBoard = (rows: string[], title: string, reveal: boolean) => (
     <div className="flex flex-col items-center gap-1">
-      <h3 className="font-bold">{title}</h3>
-      <div className="grid">
+      <p className="board-label">{title}</p>
+      <div className="grid multiplayer-board-grid">
         {rows.map((row, ri) => {
-          const cols = row === "" ? Array(5).fill("border-gray-400") : checkGuess(row, word);
+          const cols = row === "" ? Array(5).fill("") : checkGuess(row, word);
           return (
             <div key={ri} className="grid-row">
               {cols.map((c, ci) => (
@@ -134,58 +151,93 @@ export default function MultiplayerPage() {
   );
 
   return (
-    <div className="flex flex-col items-center min-h-screen gap-4 p-4 text-center">
-      <h1 className="title">MULTIPLAYER</h1>
+    <div className="page-wrapper">
+      <header className="game-header">
+        <h1 className="title">Multiplayer</h1>
+      </header>
 
-      {wsError && <p className="error-message">{wsError}</p>}
+      <div className="game-content">
+        {wsError && <p className="error-message">{wsError}</p>}
 
-      {!roomId ? (
-        <div className="flex flex-col gap-2 mt-2">
-          <button className="scoreboard-button" onClick={() => sendJsonMessage("create-room")} disabled={!connected}>
-            Start Multiplayer Game
-          </button>
-          <button className="scoreboard-button" onClick={() => {
-            const id = prompt("Enter Room ID:");
-            if (id) sendJsonMessage("join-room", { roomId: id.trim() });
-          }} disabled={!connected}>
-            Join a Room
-          </button>
-        </div>
-      ) : (
-        <>
-          <p><strong>Room:</strong> {roomId}</p>
-          <div className="flex flex-col md:flex-row gap-8">
-            {renderBoard(guesses, "Your Board", true)}
-            {renderBoard(opponentGuesses, "Opponent Board", youDone && themDone)}
+        {!roomId ? (
+          <div className="multiplayer-lobby">
+            <button
+              className="scoreboard-button"
+              onClick={() => sendJsonMessage("create-room")}
+              disabled={!connected}
+            >
+              Start Multiplayer Game
+            </button>
+
+            {showJoinInput ? (
+              <div className="room-id-join">
+                <input
+                  className="input-box"
+                  type="text"
+                  placeholder="Enter Room ID"
+                  value={joinRoomId}
+                  onChange={(e) => setJoinRoomId(e.target.value.trim().toUpperCase())}
+                  autoFocus
+                />
+                <button
+                  className="scoreboard-button"
+                  disabled={!joinRoomId || !connected}
+                  onClick={() => {
+                    sendJsonMessage("join-room", { roomId: joinRoomId });
+                    setShowJoinInput(false);
+                  }}
+                >
+                  Join
+                </button>
+                <button className="restart-button" onClick={() => setShowJoinInput(false)}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                className="scoreboard-button"
+                disabled={!connected}
+                onClick={() => setShowJoinInput(true)}
+              >
+                Join a Room
+              </button>
+            )}
           </div>
+        ) : (
+          <>
+            <div className="room-badge">Room: {roomId}</div>
 
-          <input
-            className="input-box"
-            type="text"
-            value={currentGuess}
-            readOnly
-            maxLength={5}
-            placeholder={youDone ? "" : "Type your guess…"}
-            onKeyDown={e => {
-              if (e.key === "Enter") handleKey("ENTER");
-              else if (e.key === "Backspace") handleKey("⌫");
-              else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key.toUpperCase());
-            }}
-          />
+            {multiError && <p className="error-message">{multiError}</p>}
 
-          <VirtualKeyboard onKey={handleKey} keyStatuses={keyStatuses} disabled={youDone} />
+            <div className="multiplayer-boards">
+              {renderBoard(guesses, "Your Board", true)}
+              {renderBoard(opponentGuesses, "Opponent", youDone && themDone)}
+            </div>
 
-          {gameOver && (
-            <p className="game-over">
-              {won ? "🎉 Congrats, you beat it!" : `😞 You failed! The word was ${word}`}
-            </p>
-          )}
-        </>
-      )}
+            <input
+              className="hidden-input"
+              type="text"
+              data-global-guess-keys
+              value={currentGuess}
+              onChange={(e) => setCurrentGuess(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5))}
+              autoFocus
+              aria-label="Type your guess"
+            />
 
-      <button className="restart-button mt-4" onClick={() => router.push("/")}>
-        Back to Main Game
-      </button>
+            <VirtualKeyboard onKey={handleKey} keyStatuses={keyStatuses} disabled={youDone} />
+
+            {gameOver && (
+              <p className={won ? "win-message" : "game-over"}>
+                {won ? "Brilliant!" : `The word was ${word}`}
+              </p>
+            )}
+          </>
+        )}
+
+        <button className="restart-button" onClick={() => router.push("/")}>
+          Back to Main Game
+        </button>
+      </div>
     </div>
   );
 }

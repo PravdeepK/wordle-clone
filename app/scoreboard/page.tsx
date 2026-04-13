@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 const db = getFirestore();
 
@@ -28,6 +29,8 @@ interface GameEntry {
 
 export default function Scoreboard() {
   const router = useRouter();
+  useDarkMode();
+
   const [uid, setUid] = useState<string | null>(null);
   const [games, setGames] = useState<GameEntry[]>([]);
   const [difficultyFilter, setDifficultyFilter] = useState("all");
@@ -37,7 +40,7 @@ export default function Scoreboard() {
   const fetchAllGames = async (userId: string) => {
     const allGames: GameEntry[] = [];
 
-    // solo 3–10
+    // solo 3-10
     for (let i = 3; i <= 10; i++) {
       const snap = await getDocs(
         query(
@@ -81,7 +84,7 @@ export default function Scoreboard() {
     if (!uid) return;
     if (!confirm("Reset your scoreboard?")) return;
 
-    // delete solo 3–10
+    // delete solo 3-10
     for (let i = 3; i <= 10; i++) {
       const snap = await getDocs(
         collection(db, "users", uid, "games", i.toString(), "entries")
@@ -122,7 +125,6 @@ export default function Scoreboard() {
     }
 
     await fetchAllGames(uid);
-    alert("Scoreboard reset!");
   };
 
   useEffect(() => {
@@ -152,114 +154,119 @@ export default function Scoreboard() {
   });
 
   return (
-    <div className="flex flex-col items-center min-h-screen gap-4 p-4 text-center">
-      <h1 className="title">SCOREBOARD</h1>
+    <div className="page-wrapper">
+      <header className="game-header">
+        <h1 className="title">Scoreboard</h1>
+      </header>
 
-      {/* Game Modes */}
-      <div className="flex flex-wrap gap-2 justify-center">
-        <button
-          className={`scoreboard-button ${activeTab === "all" ? "active-button" : ""}`}
-          onClick={() => {
-            setActiveTab("all");
-            setDifficultyFilter("all");
-          }}
-        >
-          All Game Modes
-        </button>
-        {[...Array(8)].map((_, i) => {
-          const len = (i + 3).toString();
-          return (
-            <button
-              key={len}
-              className={`scoreboard-button ${difficultyFilter === len ? "active-button" : ""}`}
-              onClick={() => {
-                setDifficultyFilter(len);
-                setActiveTab("solo");
-              }}
-            >
-              {len} Letters
-            </button>
-          );
-        })}
-        <button
-          className={`scoreboard-button ${
-            difficultyFilter === "custom" && activeTab === "solo" ? "active-button" : ""
-          }`}
-          onClick={() => {
-            setDifficultyFilter("custom");
-            setActiveTab("solo");
-          }}
-        >
-          Custom
-        </button>
-        <button
-          className={`scoreboard-button ${activeTab === "multiplayer" ? "active-button" : ""}`}
-          onClick={() => {
-            setActiveTab("multiplayer");
-            setDifficultyFilter("all");
-          }}
-        >
-          Multiplayer
-        </button>
-      </div>
+      <div className="game-content">
+        {/* Game Modes */}
+        <div className="scoreboard-filter-group">
+          <button
+            className={`scoreboard-button ${activeTab === "all" ? "active-button" : ""}`}
+            onClick={() => {
+              setActiveTab("all");
+              setDifficultyFilter("all");
+            }}
+          >
+            All Game Modes
+          </button>
+          {[...Array(8)].map((_, i) => {
+            const len = (i + 3).toString();
+            return (
+              <button
+                key={len}
+                className={`scoreboard-button ${difficultyFilter === len ? "active-button" : ""}`}
+                onClick={() => {
+                  setDifficultyFilter(len);
+                  setActiveTab("solo");
+                }}
+              >
+                {len} Letters
+              </button>
+            );
+          })}
+          <button
+            className={`scoreboard-button ${
+              difficultyFilter === "custom" && activeTab === "solo" ? "active-button" : ""
+            }`}
+            onClick={() => {
+              setDifficultyFilter("custom");
+              setActiveTab("solo");
+            }}
+          >
+            Custom
+          </button>
+          <button
+            className={`scoreboard-button ${activeTab === "multiplayer" ? "active-button" : ""}`}
+            onClick={() => {
+              setActiveTab("multiplayer");
+              setDifficultyFilter("all");
+            }}
+          >
+            Multiplayer
+          </button>
+        </div>
 
-      {/* Results */}
-      <div className="flex gap-2">
-        <button
-          className={`scoreboard-button ${resultFilter === "all" ? "active-button" : ""}`}
-          onClick={() => setResultFilter("all")}
-        >
-          All Results
-        </button>
-        <button
-          className={`scoreboard-button ${resultFilter === "win" ? "active-button" : ""}`}
-          onClick={() => setResultFilter("win")}
-        >
-          Wins
-        </button>
-        <button
-          className={`scoreboard-button ${resultFilter === "lose" ? "active-button" : ""}`}
-          onClick={() => setResultFilter("lose")}
-        >
-          Losses
-        </button>
-      </div>
+        {/* Results */}
+        <div className="scoreboard-filter-group">
+          <button
+            className={`scoreboard-button ${resultFilter === "all" ? "active-button" : ""}`}
+            onClick={() => setResultFilter("all")}
+          >
+            All Results
+          </button>
+          <button
+            className={`scoreboard-button ${resultFilter === "win" ? "active-button" : ""}`}
+            onClick={() => setResultFilter("win")}
+          >
+            Wins
+          </button>
+          <button
+            className={`scoreboard-button ${resultFilter === "lose" ? "active-button" : ""}`}
+            onClick={() => setResultFilter("lose")}
+          >
+            Losses
+          </button>
+        </div>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <p>No games found.</p>
-      ) : (
-        <ul className="text-lg">
-          {filtered.map((g, i) => (
-            <li
-              key={g.id}
-              className={g.result === "win" ? "text-green-600" : "text-red-600"}
-            >
-              {i + 1}.{" "}
-              {g.result === "win" ? "✅ Win" : "❌ Loss"} — Word:{" "}
-              <strong>{g.word}</strong>{" "}
-              {g.difficulty === "custom"
-                ? "(Custom)"
-                : g.difficulty === "multiplayer"
-                ? "(Multiplayer)"
-                : `(${g.difficulty} letters)`}{" "}
-              {g.multiplayer && g.player && (
-                <span className="text-blue-500 ml-1 text-sm">
-                  (vs {g.player})
+        {/* List */}
+        {filtered.length === 0 ? (
+          <p style={{ color: "var(--color-text-muted)" }}>No games found.</p>
+        ) : (
+          <ul className="scoreboard-list">
+            {filtered.map((g) => (
+              <li
+                key={g.id}
+                className={`scoreboard-item ${g.result === "win" ? "scoreboard-item--win" : "scoreboard-item--loss"}`}
+              >
+                <span style={{ fontWeight: 700 }}>{g.result === "win" ? "\u2713" : "\u2717"}</span>
+                <span className="scoreboard-word">{g.word}</span>
+                <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem", marginLeft: "auto" }}>
+                  {g.difficulty === "custom"
+                    ? "Custom"
+                    : g.difficulty === "multiplayer"
+                    ? "Multiplayer"
+                    : `${g.difficulty} letters`}
                 </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                {g.multiplayer && g.player && (
+                  <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>
+                    vs {g.player}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
-      <div className="flex gap-2">
-        <button className="restart-button" onClick={resetScoreboard}>
-          Reset Scoreboard
-        </button>
-        <button className="restart-button" onClick={() => router.push("/")}>
-          Back to Game
-        </button>
+        <div className="flex gap-2">
+          <button className="restart-button" onClick={resetScoreboard}>
+            Reset Scoreboard
+          </button>
+          <button className="restart-button" onClick={() => router.push("/")}>
+            Back to Game
+          </button>
+        </div>
       </div>
     </div>
   );

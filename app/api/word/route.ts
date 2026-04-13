@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { isAnthropicRateLimitError, withAnthropic429Retries } from "../../../lib/anthropic429Retry";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
 const fallbacks: Record<number, string> = {
   3: "cat",
@@ -19,16 +20,18 @@ export async function POST(req: Request) {
   const fallback = fallbacks[length as number] ?? "stone";
 
   try {
-    const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 10,
-      messages: [
-        {
-          role: "user",
-          content: `Give me one real English word that is exactly ${length} letters long. Return only the lowercase word, nothing else.`,
-        },
-      ],
-    });
+    const message = await withAnthropic429Retries(() =>
+      client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 10,
+        messages: [
+          {
+            role: "user",
+            content: `Give me one real English word that is exactly ${length} letters long. Return only the lowercase word, nothing else.`,
+          },
+        ],
+      })
+    );
 
     let word = (message.content[0] as { text: string }).text
       .trim()
@@ -42,7 +45,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ word });
   } catch (err) {
-    console.error("Anthropic word error:", err);
+    if (isAnthropicRateLimitError(err)) {
+      console.warn("[api/word] Anthropic rate limit after retries; using fallback.");
+    } else {
+      console.error("[api/word] Anthropic error:", err);
+    }
     return NextResponse.json({ word: fallback });
   }
 }
