@@ -9,6 +9,7 @@ import { checkGuess } from "../lib/wordle";
 import { validateWord } from "../lib/validateWord";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useGlobalGuessKeyboard } from "../hooks/useGlobalGuessKeyboard";
+import { useFlipAnimation } from "../hooks/useFlipAnimation";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 
 const db = getFirestore();
@@ -36,11 +37,17 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
-  const [shakeRow, setShakeRow] = useState<number | null>(null);
-  const [winRow, setWinRow] = useState<number | null>(null);
-  // tileReveal[rowIndex][colIndex] = colour class — revealed one at a time during flip
-  const [tileReveal, setTileReveal] = useState<Record<number, string[]>>({});
-  const [animatingRow, setAnimatingRow] = useState<number | null>(null);
+
+  const {
+    tileReveal,
+    animatingRow,
+    shakeRow,
+    winRow,
+    runFlip,
+    triggerShake,
+    setWinRow,
+    resetAnimation,
+  } = useFlipAnimation();
 
   useEffect(() => {
     const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
@@ -59,16 +66,13 @@ export default function Home() {
   }, [router]);
 
   const resetBoardState = () => {
+    resetAnimation(); // cancels pending timeouts + clears tileReveal/animatingRow/shakeRow/winRow
     setGuesses(Array(MAX_TRIES).fill(""));
     setKeyStatuses({});
     setGameOver(false);
     setWon(false);
-    setWinRow(null);
-    setShakeRow(null);
     setCurrentGuess("");
     setErrorMessage("");
-    setTileReveal({});
-    setAnimatingRow(null);
   };
 
   const saveGameResult = async (result: string) => {
@@ -143,8 +147,7 @@ export default function Home() {
     if (!(await validateWord(currentGuess))) {
       setErrorMessage("Not a valid word! Please enter a real word.");
       const currentRow = guesses.filter((g) => g !== "").length;
-      setShakeRow(currentRow);
-      setTimeout(() => setShakeRow(null), 600);
+      triggerShake(currentRow);
       return;
     }
 
@@ -157,62 +160,40 @@ export default function Home() {
     setCurrentGuess("");
 
     const colors = checkGuess(currentGuess, secretWord);
-
-    // ── Two-phase NYT flip ──────────────────────────────────────────
-    const FLIP_IN  = 250;  // ms — tile folds away
-    const STAGGER  = 300;  // ms — delay between each tile
-    const FLIP_OUT = 250;  // ms — tile unfolds showing colour
-    const BUFFER   = 20;   // ms — small safety margin
-
-    setAnimatingRow(nextRow);
-
-    // Reveal each tile's colour at the moment it's edge-on (invisible)
-    colors.forEach((colorClass, i) => {
-      setTimeout(() => {
-        setTileReveal(prev => {
-          const rowArr = [...(prev[nextRow] ?? Array(difficulty).fill(""))];
-          rowArr[i] = colorClass;
-          return { ...prev, [nextRow]: rowArr };
-        });
-      }, i * STAGGER + FLIP_IN + BUFFER);
-    });
-
-    // Total time until the last tile's flip-out completes
-    const flipDone = (colors.length - 1) * STAGGER + FLIP_IN + FLIP_OUT + BUFFER * 2;
-
-    setTimeout(() => setAnimatingRow(null), flipDone);
-
-    // Update keyboard colours after animation
-    setTimeout(() => {
-      setKeyStatuses(prev => {
-        const next = { ...prev };
-        currentGuess.split("").forEach((letter, i) => {
-          const c = colors[i];
-          if (c.includes("green") || (c.includes("yellow") && next[letter] !== "bg-green-500 text-white")) {
-            next[letter] = c;
-          } else if (!next[letter]) {
-            next[letter] = c;
-          }
-        });
-        return next;
-      });
-    }, flipDone);
-
-    // Delay win/lose state until after the last tile flips
     const guessCount = newGuesses.filter((g) => g !== "").length;
-    if (currentGuess === secretWord) {
-      setTimeout(async () => {
-        await saveGameResult("win");
-        setWon(true);
-        setGameOver(true);
-        setWinRow(nextRow);
-      }, flipDone);
-    } else if (guessCount >= MAX_TRIES) {
-      setTimeout(async () => {
-        await saveGameResult("lose");
-        setGameOver(true);
-      }, flipDone);
-    }
+    const submittedGuess = currentGuess;
+
+    runFlip({
+      rowIndex: nextRow,
+      colors,
+      guess: submittedGuess,
+      wordLength: difficulty,
+      onFlipDone: (flipColors, flipGuess) => {
+        // Update keyboard colours
+        setKeyStatuses((prev) => {
+          const next = { ...prev };
+          flipGuess.split("").forEach((letter, i) => {
+            const c = flipColors[i];
+            if (c.includes("green") || (c.includes("yellow") && next[letter] !== "bg-green-500 text-white")) {
+              next[letter] = c;
+            } else if (!next[letter]) {
+              next[letter] = c;
+            }
+          });
+          return next;
+        });
+        // Win / lose
+        if (flipGuess === secretWord) {
+          void saveGameResult("win");
+          setWon(true);
+          setGameOver(true);
+          setWinRow(nextRow);
+        } else if (guessCount >= MAX_TRIES) {
+          void saveGameResult("lose");
+          setGameOver(true);
+        }
+      },
+    });
   };
 
   const handleVirtualKey = async (key: string) => {

@@ -9,6 +9,7 @@ import { checkGuess } from "../../../lib/wordle";
 import { validateWord } from "../../../lib/validateWord";
 import { useDarkMode } from "../../../hooks/useDarkMode";
 import { useGlobalGuessKeyboard } from "../../../hooks/useGlobalGuessKeyboard";
+import { useFlipAnimation } from "../../../hooks/useFlipAnimation";
 import VirtualKeyboard from "../../../components/VirtualKeyboard";
 
 const db = getFirestore();
@@ -29,10 +30,16 @@ export default function CustomChallengePage() {
   const [challengeExpired, setChallengeExpired] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [ready, setReady] = useState(false);
-  const [shakeRow, setShakeRow] = useState<number | null>(null);
-  const [winRow, setWinRow] = useState<number | null>(null);
-  const [tileReveal, setTileReveal] = useState<Record<number, string[]>>({});
-  const [animatingRow, setAnimatingRow] = useState<number | null>(null);
+
+  const {
+    tileReveal,
+    animatingRow,
+    shakeRow,
+    winRow,
+    runFlip,
+    triggerShake,
+    setWinRow,
+  } = useFlipAnimation();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -72,8 +79,7 @@ export default function CustomChallengePage() {
     if (!(await validateWord(currentGuess))) {
       setErrorMessage("Not a valid word! Please enter a real word.");
       const currentRow = guesses.filter((g) => g !== "").length;
-      setShakeRow(currentRow);
-      setTimeout(() => setShakeRow(null), 600);
+      triggerShake(currentRow);
       return;
     }
 
@@ -86,55 +92,40 @@ export default function CustomChallengePage() {
     setCurrentGuess("");
 
     const colors = checkGuess(currentGuess, secretWord);
-    const FLIP_IN = 250;
-    const STAGGER = 300;
-    const FLIP_OUT = 250;
-    const BUFFER = 20;
-
-    setAnimatingRow(nextRow);
-
-    colors.forEach((colorClass, i) => {
-      setTimeout(() => {
-        setTileReveal(prev => {
-          const rowArr = [...(prev[nextRow] ?? Array(secretWord.length).fill(""))];
-          rowArr[i] = colorClass;
-          return { ...prev, [nextRow]: rowArr };
-        });
-      }, i * STAGGER + FLIP_IN + BUFFER);
-    });
-
-    const flipDone = (colors.length - 1) * STAGGER + FLIP_IN + FLIP_OUT + BUFFER * 2;
-    setTimeout(() => setAnimatingRow(null), flipDone);
-
-    setTimeout(() => {
-      setKeyStatuses(prev => {
-        const next = { ...prev };
-        currentGuess.split("").forEach((letter, i) => {
-          const c = colors[i];
-          if (c.includes("green") || (c.includes("yellow") && next[letter] !== "bg-green-500 text-white")) {
-            next[letter] = c;
-          } else if (!next[letter]) {
-            next[letter] = c;
-          }
-        });
-        return next;
-      });
-    }, flipDone);
-
     const guessCount = newGuesses.filter((g) => g !== "").length;
-    if (currentGuess === secretWord) {
-      setTimeout(async () => {
-        await saveResult("win");
-        setWon(true);
-        setGameOver(true);
-        setWinRow(nextRow);
-      }, flipDone);
-    } else if (guessCount >= MAX_TRIES) {
-      setTimeout(async () => {
-        await saveResult("lose");
-        setGameOver(true);
-      }, flipDone);
-    }
+    const submittedGuess = currentGuess;
+
+    runFlip({
+      rowIndex: nextRow,
+      colors,
+      guess: submittedGuess,
+      wordLength: secretWord.length,
+      onFlipDone: (flipColors, flipGuess) => {
+        // Update keyboard colours
+        setKeyStatuses((prev) => {
+          const next = { ...prev };
+          flipGuess.split("").forEach((letter, i) => {
+            const c = flipColors[i];
+            if (c.includes("green") || (c.includes("yellow") && next[letter] !== "bg-green-500 text-white")) {
+              next[letter] = c;
+            } else if (!next[letter]) {
+              next[letter] = c;
+            }
+          });
+          return next;
+        });
+        // Win / lose
+        if (flipGuess === secretWord) {
+          void saveResult("win");
+          setWon(true);
+          setGameOver(true);
+          setWinRow(nextRow);
+        } else if (guessCount >= MAX_TRIES) {
+          void saveResult("lose");
+          setGameOver(true);
+        }
+      },
+    });
   };
 
   const handleVirtualKey = async (key: string) => {
