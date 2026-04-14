@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   signInWithEmailAndPassword,
@@ -12,27 +12,9 @@ import {
 import { auth } from "../../config/firebaseConfig";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import WordleLogoTiles from "../../components/WordleLogoTiles";
 
 const db = getFirestore();
-
-const TILE_COLOR_CLASSES = ["bg-green-500", "bg-yellow-500", "bg-gray-400"] as const;
-
-function randomTileColors(length: number): string[] {
-  return Array.from({ length }, () => {
-    const pick = TILE_COLOR_CLASSES[Math.floor(Math.random() * TILE_COLOR_CLASSES.length)];
-    return pick;
-  });
-}
-
-/** Same on server + first client paint — avoids hydration mismatch; random runs in useEffect. */
-const STATIC_LOGO_COLOR_ROW: string[] = [
-  "bg-green-500",
-  "bg-yellow-500",
-  "bg-gray-400",
-  "bg-green-500",
-  "bg-yellow-500",
-  "bg-green-500",
-];
 
 /** "Show password" — open eye (tap to reveal). Heroicons outline style. */
 function IconEyeOpen() {
@@ -54,18 +36,6 @@ function IconEyeSlash() {
   );
 }
 
-function LoginTileRow({ text, colors }: { text: string; colors: string[] }) {
-  return (
-    <div className="login-tiles">
-      {text.split("").map((char, i) => (
-        <div key={i} className={`cell login-tile ${colors[i]}`}>
-          {char === " " ? "\u00A0" : char}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function LoginPage() {
   const router = useRouter();
   useDarkMode();
@@ -81,17 +51,6 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loginLogoColors, setLoginLogoColors] = useState(() => ({
-    wordle: [...STATIC_LOGO_COLOR_ROW],
-    byprav: [...STATIC_LOGO_COLOR_ROW],
-  }));
-
-  useEffect(() => {
-    setLoginLogoColors({
-      wordle: randomTileColors("WORDLE".length),
-      byprav: randomTileColors("BYPRAV".length),
-    });
-  }, []);
 
   const resolveEmail = async (identifier: string): Promise<string | null> => {
     if (identifier.includes("@")) return identifier;
@@ -178,11 +137,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Decorative Wordle tiles */}
-      <div className="login-tiles-stack">
-        <LoginTileRow text="WORDLE" colors={loginLogoColors.wordle} />
-        <LoginTileRow text="BYPRAV" colors={loginLogoColors.byprav} />
-      </div>
+      <WordleLogoTiles />
 
       <div className="login-card">
         <h1 className="title">{isLoginMode ? "Welcome Back" : "Join Wordle"}</h1>
