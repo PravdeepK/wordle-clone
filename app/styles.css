@@ -92,6 +92,20 @@ button {
   min-height: 100vh;
 }
 
+/* Coming soon landing (NEXT_PUBLIC_COMING_SOON=true on prod) — tiles: WordleLogoTiles + .login-page */
+.coming-soon-landing {
+  text-align: center;
+}
+
+.coming-soon__subtitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
 /* NYT-style sticky header */
 .game-header {
   position: sticky;
