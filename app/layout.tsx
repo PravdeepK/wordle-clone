@@ -2,8 +2,14 @@ import "./styles.css";
 import React from "react";
 
 export const metadata = {
-  title: "Wordle",
+  title: "Wordle By Prav",
   description: "A Wordle clone",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+  },
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
