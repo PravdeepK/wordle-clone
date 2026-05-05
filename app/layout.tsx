@@ -5,10 +5,7 @@ export const metadata = {
   title: "Wordle By Prav",
   description: "A Wordle clone",
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
-    ],
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
 };
 

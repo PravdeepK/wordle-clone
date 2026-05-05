@@ -95,6 +95,101 @@ button {
 /* Coming soon landing (NEXT_PUBLIC_COMING_SOON=true on prod) — tiles: WordleLogoTiles + .login-page */
 .coming-soon-landing {
   text-align: center;
+  position: relative;
+}
+
+.coming-soon-top-bar {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 10;
+}
+
+.coming-soon-auth-trigger.restart-button {
+  padding-inline: 16px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .coming-soon-auth-trigger.restart-button {
+    padding-inline: 12px;
+    font-size: 0.82rem;
+  }
+}
+
+/* Auth modal layered over coming soon (Firebase login / signup) */
+.coming-soon-auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.coming-soon-auth-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.coming-soon-auth-dialog-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: min(420px, 100%);
+  outline: none;
+}
+
+.coming-soon-auth-card-frame {
+  position: relative;
+  width: 100%;
+}
+
+.coming-soon-auth-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.coming-soon-auth-close svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.coming-soon-auth-close:hover {
+  background-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.login-card--embedded-modal {
+  padding-top: 44px;
 }
 
 .coming-soon__subtitle {
