@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { isAnthropicRateLimitError, withAnthropic429Retries } from "../../../lib/anthropic429Retry";
+import { rateLimit, clientIp } from "../../../lib/rateLimit";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
@@ -16,6 +17,14 @@ const fallbacks: Record<number, string> = {
 };
 
 export async function POST(req: Request) {
+  const limit = rateLimit(`word:${clientIp(req)}`, 30, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   const { length = 5 } = await req.json();
   const fallback = fallbacks[length as number] ?? "stone";
 

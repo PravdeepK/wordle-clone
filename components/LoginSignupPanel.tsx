@@ -6,7 +6,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
-  sendEmailVerification,
   signOut,
 } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
@@ -103,7 +102,11 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
         const userCred = await createUserWithEmailAndPassword(auth, inputIdentifier, password);
         await updateProfile(userCred.user, { displayName: username });
         await setDoc(userDocRef, { email: inputIdentifier, uid: userCred.user.uid });
-        await sendEmailVerification(userCred.user);
+        await fetch("/api/send-verification-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: inputIdentifier }),
+        });
         await signOut(auth);
 
         setIsLoginMode(true);
@@ -135,7 +138,11 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
         return;
       }
       const userCred = await signInWithEmailAndPassword(auth, email, password);
-      await sendEmailVerification(userCred.user);
+      await fetch("/api/send-verification-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
       await signOut(auth);
       setNeedsVerification(false);
       setSuccessMsg("Verification email resent! Check your inbox.");
