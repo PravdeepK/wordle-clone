@@ -50,7 +50,7 @@ export default function WordleHomePage() {
   } = useFlipAnimation();
 
   useEffect(() => {
-    const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
+    const isLocalDev = process.env.NODE_ENV === "development";
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace("/login");

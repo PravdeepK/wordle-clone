@@ -1107,6 +1107,94 @@ html.dark .pretty-success {
   text-align: center;
 }
 
+.chat-panel {
+  width: 100%;
+  max-width: 560px;
+  margin: 16px auto 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background-color: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.chat-log {
+  height: 160px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  margin: auto;
+}
+
+.chat-line {
+  word-break: break-word;
+}
+
+.chat-line--system {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.chat-line--user {
+  color: var(--color-text);
+}
+
+.chat-line--user .chat-from {
+  font-weight: 700;
+  color: #4a90e2;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.chat-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.chat-input:focus {
+  border-color: var(--color-text-muted);
+}
+
+.chat-send {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--color-text);
+  color: var(--color-bg);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.chat-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ─────────────────────────────────────────────────────────────────
    Custom word challenge page
 ───────────────────────────────────────────────────────────────── */

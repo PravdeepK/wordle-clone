@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 interface WebSocketOptions {
-  onRoomJoined?: (roomId: string, word: string) => void;
-  onGuestJoined?: () => void;
+  onRoomJoined?: (roomId: string, word: string, opponentUsername?: string) => void;
+  onGuestJoined?: (opponentUsername?: string) => void;
   onOpponentGuess?: (guess: string) => void;
   onPlayerFinished?: () => void;
+  onChat?: (text: string, from: string) => void;
 }
 
 const MAX_RETRIES = 5;
@@ -46,11 +47,12 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
         try {
           const { type, payload } = JSON.parse(event.data as string);
           const opts = optionsRef.current;
-          if (type === "room-created")    opts.onRoomJoined?.(payload.roomId, payload.word);
-          if (type === "room-joined")     opts.onRoomJoined?.(payload.roomId, payload.word);
-          if (type === "guest-joined")    opts.onGuestJoined?.();
+          if (type === "room-created")    opts.onRoomJoined?.(payload.roomId, payload.word, payload.opponentUsername);
+          if (type === "room-joined")     opts.onRoomJoined?.(payload.roomId, payload.word, payload.opponentUsername);
+          if (type === "guest-joined")    opts.onGuestJoined?.(payload?.opponentUsername);
           if (type === "guess")           opts.onOpponentGuess?.(payload.guess);
           if (type === "player-finished") opts.onPlayerFinished?.();
+          if (type === "chat")            opts.onChat?.(payload?.text ?? "", payload?.from ?? "Opponent");
           if (type === "room-expired")    setWsError("Room has expired. Please refresh and try again.");
         } catch (err) {
           console.warn("[WebSocket] Invalid message:", err);

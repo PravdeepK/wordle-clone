@@ -69,12 +69,12 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
       if (isLoginMode) {
         const email = await resolveEmail(inputIdentifier);
         if (!email) {
-          setError("Username not found.");
+          setError("Invalid login. Please check your credentials and try again.");
           return;
         }
 
         const userCred = await signInWithEmailAndPassword(auth, email, password);
-        const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
+        const isLocalDev = process.env.NODE_ENV === "development";
         if (!userCred.user.emailVerified && !isLocalDev) {
           await signOut(auth);
           setNeedsVerification(true);
@@ -118,10 +118,14 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
       }
     } catch (err: unknown) {
       const e = err as { message?: string; code?: string };
-      const formatted =
-        e.code === "auth/email-already-in-use"
-          ? "Error: Email already in use"
-          : "Error: " + (e.message || "Something went wrong");
+      let formatted: string;
+      if (isLoginMode) {
+        formatted = "Invalid login. Please check your credentials and try again.";
+      } else if (e.code === "auth/email-already-in-use") {
+        formatted = "Error: Email already in use";
+      } else {
+        formatted = "Error: " + (e.message || "Something went wrong");
+      }
       setError(formatted);
     } finally {
       setLoading(false);
