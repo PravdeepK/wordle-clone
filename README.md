@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Wordle By Prav
 
-## Getting Started
+A personal Wordle clone. Pick a word length, guess in six tries, and challenge friends with custom words.
 
-First, run the development server:
+Built with Next.js (App Router), Firebase Auth + Firestore, Resend for transactional email, and a Node WebSocket server for real-time multiplayer.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- **Flexible word length** — 3 to 10 letters, picked before each game.
+- **Accounts** — Firebase email sign-in with email verification (skipped in local dev).
+- **Custom challenges** — create a word and share a link.
+- **Real-time multiplayer** — head-to-head over a WebSocket server (`ws-server/`).
+- **Scoreboard** — game results stored per user in Firestore.
+- **Coming soon mode** — toggle a minimal landing page via `NEXT_PUBLIC_COMING_SOON=true`.
+- **Light + dark theme** — NYT-Wordle-style palette throughout.
+- **In-app feedback** — bug reports / suggestions sent via Resend, with optional image/video attachments and a generated ticket ID.
+
+## Project layout
+
+```
+app/                    Next.js App Router pages, layouts, and API routes
+  api/                  Server routes (verify email, validate word, feedback, etc.)
+  custom-challenge/     Shared custom-word link pages
+  multiplayer/          Multiplayer lobby + match UI
+  opengraph-image.tsx   Generated OG/Twitter card
+  robots.ts             /robots.txt
+  sitemap.ts            /sitemap.xml
+components/             Shared React components (modals, keyboard, logo, etc.)
+config/                 Firebase client config
+hooks/                  Reusable React hooks (dark mode, animations, keys)
+lib/                    Shared utilities (word validation, rate limiting, etc.)
+ws-server/              Standalone WebSocket server for multiplayer
+public/                 Static assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Getting started
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Visit [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+Run the multiplayer WebSocket server in a separate process:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd ws-server
+npm install
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create a `.env.local` based on the table below. Features that depend on a missing variable will fail at runtime; the dev server still boots without them.
 
-## Deploy on Vercel
+| Variable | Used by | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase client | Standard Firebase web config (apiKey, authDomain, projectId, etc.) |
+| `FIREBASE_ADMIN_PROJECT_ID` | API routes | Firebase Admin SDK |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | API routes | Firebase Admin SDK |
+| `FIREBASE_ADMIN_PRIVATE_KEY` | API routes | Newlines escaped as `\n`; the route un-escapes them |
+| `RESEND_API_KEY` | `/api/send-verification-email`, `/api/feedback` | Resend API key |
+| `RESEND_FROM_EMAIL` | Same | Verified sender address |
+| `FEEDBACK_TO_EMAIL` | `/api/feedback` | Where bug reports land (optional; defaults to project owner) |
+| `NEXT_PUBLIC_SITE_URL` | OG image, sitemap, robots | Canonical site URL, e.g. `https://wordlebyprav.com` |
+| `NEXT_PUBLIC_COMING_SOON` | Home page, robots, sitemap | When `"true"`, shows the waitlist landing |
+| `NEXT_PUBLIC_WS_URL` | Multiplayer client | URL of the `ws-server` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev      # Next dev server
+npm run build    # Production build
+npm start        # Production server
+npm run lint     # ESLint
+npm run clean    # rm -rf .next
+```
+
+## Deployment
+
+Deployed on Vercel. The WebSocket server runs separately (it isn't compatible with Vercel's serverless runtime — host it on Fly, Railway, or any long-running Node host, and point `NEXT_PUBLIC_WS_URL` at it).
+
+## License
+
+Personal project — no license granted. Code is shared for portfolio / reference purposes.

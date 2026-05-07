@@ -9,6 +9,7 @@ import { checkGuess } from "../../lib/wordle";
 import { validateWord } from "../../lib/validateWord";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import VirtualKeyboard from "../../components/VirtualKeyboard";
+import AppHeader from "../../components/AppHeader";
 import useWebSocket from "./useWebSocket";
 import { useGlobalGuessKeyboard } from "../../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../../hooks/useFlipAnimation";
@@ -294,9 +295,7 @@ export default function MultiplayerPage() {
 
   return (
     <div className="page-wrapper">
-      <header className="game-header">
-        <h1 className="title">Multiplayer</h1>
-      </header>
+      <AppHeader title="Multiplayer" backHref="/" greetingName={myUsername} />
 
       <div className="game-content">
         {wsError && <p className="error-message">{wsError}</p>}
@@ -501,9 +500,6 @@ export default function MultiplayerPage() {
           </>
         )}
 
-        <button className="restart-button" onClick={() => router.push("/")}>
-          Back to Main Game
-        </button>
       </div>
     </div>
   );

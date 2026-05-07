@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from "next";
 
 const siteName = "Wordle By Prav";
 const description =
-  "A personal Wordle-style word game. Guess the hidden word in six tries — flexible word lengths, custom challenges, and real-time multiplayer.";
+  "A Wordle clone I built. Pick a word length, guess in six tries, share challenges with friends.";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
