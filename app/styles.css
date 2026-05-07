@@ -1349,3 +1349,214 @@ html.dark .pretty-success {
     max-width: 40px;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Multiplayer · entry tabs + Settings (Mobile layout picker)
+───────────────────────────────────────────────────────────────── */
+.mp-tabs {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 4px;
+}
+.mp-tab {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.mp-tab--active {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+
+.mp-settings-panel {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-card);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mp-settings-title {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.mp-settings-foot {
+  text-align: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.mp-layout-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mp-layout-card {
+  position: relative;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 10px 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.mp-layout-card:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+.mp-layout-card--sel {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+.mp-layout-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.mp-layout-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.mp-layout-sub {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  opacity: 0.7;
+}
+
+/* mini visual previews inside the layout cards */
+.pv {
+  width: 100%;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: currentColor;
+}
+.pv-top { display: flex; gap: 3px; flex: 1; }
+.pv-board {
+  flex: 1;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1px;
+  padding: 1px;
+  opacity: 0.85;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(5, 1fr);
+}
+.pv-board--big {
+  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
+  flex: 1;
+}
+.pv-cell {
+  background: currentColor;
+  opacity: 0.35;
+  border-radius: 1px;
+}
+.pv-tabs { display: flex; gap: 2px; }
+.pv-tab {
+  flex: 1;
+  height: 6px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+.pv-tab--on { background: currentColor; }
+.pv-kbd {
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  display: flex;
+  gap: 1px;
+  padding: 1px;
+}
+.pv-key {
+  flex: 1;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 1px;
+}
+.pv-chat {
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Multiplayer · in-game · pill tabs (Layout B) + mobile split (A)
+───────────────────────────────────────────────────────────────── */
+.mp-pill-tabs {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 4px;
+  padding: 0 4px;
+}
+.mp-pill {
+  flex: 1;
+  padding: 7px 6px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.mp-pill--on { color: var(--color-text); border-color: var(--color-text); }
+
+/* Layout A · split on mobile: force two boards side-by-side
+   even on narrow screens. */
+@media (max-width: 760px) {
+  .multiplayer-boards--split-mobile {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 10px;
+  }
+  .multiplayer-boards--split-mobile .multiplayer-board-grid {
+    --tile-size: clamp(20px, 7.5vw, 32px);
+  }
+  .multiplayer-boards--split-mobile .board-label {
+    font-size: 0.62rem;
+  }
+}

@@ -37,6 +37,27 @@ export default function MultiplayerPage() {
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [multiError, setMultiError] = useState("");
   const [selectedLength, setSelectedLength] = useState(5);
+  const [entryTab, setEntryTab] = useState<"game" | "settings">("game");
+  const [mobileLayout, setMobileLayout] = useState<"split" | "tabs">("split");
+  const [boardTab, setBoardTab] = useState<"you" | "opp">("you");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mp.mobileLayout");
+      if (saved === "split" || saved === "tabs") setMobileLayout(saved);
+    } catch {}
+    const mql = window.matchMedia("(max-width: 760px)");
+    const apply = () => setIsMobile(mql.matches);
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
+
+  const updateMobileLayout = (next: "split" | "tabs") => {
+    setMobileLayout(next);
+    try { localStorage.setItem("mp.mobileLayout", next); } catch {}
+  };
 
   type ChatEntry = { id: number; kind: "system" | "user"; text: string; from?: string };
   const [chatLog, setChatLog] = useState<ChatEntry[]>([]);
@@ -282,6 +303,29 @@ export default function MultiplayerPage() {
 
         {!roomId ? (
           <div className="multiplayer-lobby">
+            <div className="mp-tabs" role="tablist" aria-label="Multiplayer sections">
+              <button
+                role="tab"
+                aria-selected={entryTab === "game"}
+                className={`mp-tab ${entryTab === "game" ? "mp-tab--active" : ""}`}
+                onClick={() => setEntryTab("game")}
+              >
+                Game
+              </button>
+              <button
+                role="tab"
+                aria-selected={entryTab === "settings"}
+                className={`mp-tab ${entryTab === "settings" ? "mp-tab--active" : ""}`}
+                onClick={() => setEntryTab("settings")}
+              >
+                Settings
+              </button>
+            </div>
+
+            {entryTab === "settings" ? (
+              <MobileLayoutPicker value={mobileLayout} onChange={updateMobileLayout} />
+            ) : (
+            <>
             <div className="setup-panel">
               <p className="setup-label">Pick a word length</p>
               <div className="setup-length-number">{selectedLength}</div>
@@ -352,6 +396,8 @@ export default function MultiplayerPage() {
                 Join a Room
               </button>
             )}
+            </>
+            )}
           </div>
         ) : (
           <>
@@ -359,10 +405,40 @@ export default function MultiplayerPage() {
 
             {multiError && <p className="error-message">{multiError}</p>}
 
-            <div className="multiplayer-boards">
-              {renderBoard(guesses, `${myUsername}'s Board`, true, true)}
-              {renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
-            </div>
+            {isMobile && mobileLayout === "tabs" ? (
+              <>
+                <div className="mp-pill-tabs" role="tablist" aria-label="Boards">
+                  <button
+                    role="tab"
+                    aria-selected={boardTab === "you"}
+                    className={`mp-pill mp-pill--you ${boardTab === "you" ? "mp-pill--on" : ""}`}
+                    onClick={() => setBoardTab("you")}
+                  >
+                    You · {Math.min(guesses.filter(g => g !== "").length + (youDone ? 0 : 1), MAX_TRIES)}/{MAX_TRIES}
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={boardTab === "opp"}
+                    className={`mp-pill mp-pill--opp ${boardTab === "opp" ? "mp-pill--on" : ""}`}
+                    onClick={() => setBoardTab("opp")}
+                  >
+                    {opponentUsername} · {opponentGuesses.filter(g => g !== "").length}/{MAX_TRIES}
+                  </button>
+                </div>
+                <div className="multiplayer-boards multiplayer-boards--single">
+                  {boardTab === "you"
+                    ? renderBoard(guesses, `${myUsername}'s Board`, true, true)
+                    : renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
+                </div>
+              </>
+            ) : (
+              <div
+                className={`multiplayer-boards ${isMobile && mobileLayout === "split" ? "multiplayer-boards--split-mobile" : ""}`}
+              >
+                {renderBoard(guesses, `${myUsername}'s Board`, true, true)}
+                {renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
+              </div>
+            )}
 
             <input
               className="hidden-input"
@@ -430,5 +506,97 @@ export default function MultiplayerPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+function MobileLayoutPicker({
+  value,
+  onChange,
+}: {
+  value: "split" | "tabs";
+  onChange: (next: "split" | "tabs") => void;
+}) {
+  const options: Array<{ id: "split" | "tabs"; label: string; sub: string }> = [
+    { id: "split", label: "A · Split", sub: "Both boards" },
+    { id: "tabs", label: "B · Tabs", sub: "Big board" },
+  ];
+
+  const onKey = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      onChange(options[(idx + 1) % options.length].id);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      onChange(options[(idx - 1 + options.length) % options.length].id);
+    }
+  };
+
+  return (
+    <div className="mp-settings-panel">
+      <div className="mp-settings-title">Mobile layout</div>
+      <div className="mp-layout-row" role="radiogroup" aria-label="Mobile layout">
+        {options.map((opt, idx) => {
+          const selected = value === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              className={`mp-layout-card ${selected ? "mp-layout-card--sel" : ""}`}
+              onClick={() => onChange(opt.id)}
+              onKeyDown={(e) => onKey(e, idx)}
+            >
+              {selected && <span className="mp-layout-check" aria-hidden="true">✓</span>}
+              <span className="mp-layout-preview" aria-hidden="true">
+                {opt.id === "split" ? <SplitPreview /> : <TabsPreview />}
+              </span>
+              <span className="mp-layout-label">{opt.label}</span>
+              <span className="mp-layout-sub">{opt.sub}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mp-settings-foot">Saves immediately</div>
+    </div>
+  );
+}
+
+function SplitPreview() {
+  const cells = Array.from({ length: 15 });
+  return (
+    <span className="pv">
+      <span className="pv-top">
+        <span className="pv-board">
+          {cells.map((_, i) => <span key={i} className="pv-cell" />)}
+        </span>
+        <span className="pv-board">
+          {cells.map((_, i) => <span key={i} className="pv-cell" />)}
+        </span>
+      </span>
+      <span className="pv-kbd">
+        {Array.from({ length: 6 }).map((_, i) => <span key={i} className="pv-key" />)}
+      </span>
+      <span className="pv-chat" />
+    </span>
+  );
+}
+
+function TabsPreview() {
+  return (
+    <span className="pv">
+      <span className="pv-tabs">
+        <span className="pv-tab pv-tab--on" />
+        <span className="pv-tab" />
+      </span>
+      <span className="pv-board pv-board--big">
+        {Array.from({ length: 20 }).map((_, i) => <span key={i} className="pv-cell" />)}
+      </span>
+      <span className="pv-kbd">
+        {Array.from({ length: 6 }).map((_, i) => <span key={i} className="pv-key" />)}
+      </span>
+      <span className="pv-chat" />
+    </span>
   );
 }
