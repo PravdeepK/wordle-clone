@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { rateLimit, clientIp } from "../../../lib/rateLimit";
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
 export async function POST(request: Request) {
   const limit = rateLimit(`validate:${clientIp(request)}`, 1000, 60_000);
@@ -16,14 +19,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ valid: false }, { status: 400 });
   }
 
+  const clean = word.trim().toLowerCase().replace(/[^a-z]/g, "");
+
   try {
-    const res = await fetch(
-      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    return NextResponse.json({ valid: res.ok });
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 5,
+      messages: [
+        {
+          role: "user",
+          content: `Is "${clean}" something a typical English speaker would recognize as a word? Be permissive: accept dictionary words, plurals, conjugations, common slang, internet slang, informal terms, mild profanity, brand names that have entered common usage, and proper nouns people would know. Only reject pure gibberish or random letter combinations. Reply with only "yes" or "no".`,
+        },
+      ],
+    });
+
+    const reply = (message.content[0] as { text: string }).text.trim().toLowerCase();
+    return NextResponse.json({ valid: reply.startsWith("yes") });
   } catch {
-    // Network failure — fail open so valid words aren't blocked
+    // Fail open so valid words aren't blocked on API errors
     return NextResponse.json({ valid: true });
   }
 }

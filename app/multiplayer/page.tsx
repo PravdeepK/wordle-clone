@@ -54,24 +54,18 @@ export default function MultiplayerPage() {
     onGuestJoined: () => {},
     onOpponentGuess: (guess) => {
       const g = guess.toUpperCase();
-      let idxUsed = -1;
-      setOpponentGuesses(o => {
-        const idx = o.findIndex(x => x === "");
-        if (idx === -1) return o;
-        idxUsed = idx;
-        const n = [...o];
-        n[idx] = g;
-        return n;
+      const idx = opponentGuesses.findIndex(x => x === "");
+      if (idx === -1) return;
+      const n = [...opponentGuesses];
+      n[idx] = g;
+      setOpponentGuesses(n);
+      themAnim.runFlip({
+        rowIndex: idx,
+        colors: checkGuess(g, word),
+        guess: g,
+        wordLength: 5,
+        onFlipDone: () => {},
       });
-      if (idxUsed !== -1) {
-        themAnim.runFlip({
-          rowIndex: idxUsed,
-          colors: checkGuess(g, word),
-          guess: g,
-          wordLength: 5,
-          onFlipDone: () => {},
-        });
-      }
     },
     onPlayerFinished: () => setThemDone(true),
   });
