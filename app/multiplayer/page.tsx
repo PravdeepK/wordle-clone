@@ -563,40 +563,82 @@ function MobileLayoutPicker({
   );
 }
 
-function SplitPreview() {
-  const cells = Array.from({ length: 15 });
+function MiniBoard({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const cols = 5;
+  const rows = 3;
+  const pad = 2;
+  const gap = 2;
+  const cellW = (w - pad * 2 - gap * (cols - 1)) / cols;
+  const cellH = (h - pad * 2 - gap * (rows - 1)) / rows;
+  const cells = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      cells.push(
+        <rect
+          key={`${r}-${c}`}
+          x={x + pad + c * (cellW + gap)}
+          y={y + pad + r * (cellH + gap)}
+          width={cellW}
+          height={cellH}
+          fill="currentColor"
+          opacity="0.5"
+          rx="1"
+        />
+      );
+    }
+  }
   return (
-    <span className="pv">
-      <span className="pv-top">
-        <span className="pv-board">
-          {cells.map((_, i) => <span key={i} className="pv-cell" />)}
-        </span>
-        <span className="pv-board">
-          {cells.map((_, i) => <span key={i} className="pv-cell" />)}
-        </span>
-      </span>
-      <span className="pv-kbd">
-        {Array.from({ length: 6 }).map((_, i) => <span key={i} className="pv-key" />)}
-      </span>
-      <span className="pv-chat" />
-    </span>
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth="1.5" rx="3" />
+      {cells}
+    </g>
+  );
+}
+
+function MiniKeyboard({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const keys = 7;
+  const pad = 1.5;
+  const gap = 1.5;
+  const keyW = (w - pad * 2 - gap * (keys - 1)) / keys;
+  const keyH = h - pad * 2;
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+      {Array.from({ length: keys }).map((_, i) => (
+        <rect
+          key={i}
+          x={x + pad + i * (keyW + gap)}
+          y={y + pad}
+          width={keyW}
+          height={keyH}
+          fill="currentColor"
+          opacity="0.5"
+          rx="0.5"
+        />
+      ))}
+    </g>
+  );
+}
+
+function SplitPreview() {
+  return (
+    <svg className="pv-svg" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <MiniBoard x={2} y={2} w={96} h={70} />
+      <MiniBoard x={102} y={2} w={96} h={70} />
+      <MiniKeyboard x={2} y={78} w={196} h={20} />
+      <rect x={2} y={102} width={196} height={14} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+    </svg>
   );
 }
 
 function TabsPreview() {
   return (
-    <span className="pv">
-      <span className="pv-tabs">
-        <span className="pv-tab pv-tab--on" />
-        <span className="pv-tab" />
-      </span>
-      <span className="pv-board pv-board--big">
-        {Array.from({ length: 20 }).map((_, i) => <span key={i} className="pv-cell" />)}
-      </span>
-      <span className="pv-kbd">
-        {Array.from({ length: 6 }).map((_, i) => <span key={i} className="pv-key" />)}
-      </span>
-      <span className="pv-chat" />
-    </span>
+    <svg className="pv-svg" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <rect x={2} y={2} width={96} height={12} fill="currentColor" rx="2" />
+      <rect x={102} y={2} width={96} height={12} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+      <MiniBoard x={2} y={20} w={196} h={52} />
+      <MiniKeyboard x={2} y={78} w={196} h={20} />
+      <rect x={2} y={102} width={196} height={14} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+    </svg>
   );
 }

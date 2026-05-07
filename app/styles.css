@@ -708,6 +708,7 @@ html.dark .pretty-success {
 ───────────────────────────────────────────────────────────────── */
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -715,14 +716,6 @@ html.dark .pretty-success {
   gap: 24px;
   padding: 24px 16px;
   background-color: var(--color-bg);
-}
-
-@media (max-width: 640px) {
-  .login-page {
-    justify-content: flex-start;
-    padding-top: max(8px, env(safe-area-inset-top));
-    gap: 16px;
-  }
 }
 
 .login-tiles-stack {
@@ -1382,15 +1375,15 @@ html.dark .pretty-success {
 
 .mp-settings-panel {
   width: 100%;
-  max-width: 360px;
+  max-width: 420px;
   margin: 0 auto;
   border: 1.5px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--color-bg-card);
-  padding: 12px;
+  padding: 18px 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 .mp-settings-title {
   text-align: center;
@@ -1402,28 +1395,26 @@ html.dark .pretty-success {
 }
 .mp-settings-foot {
   text-align: center;
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
   color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-top: 4px;
 }
 .mp-layout-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 12px;
 }
 .mp-layout-card {
   position: relative;
   border: 1.5px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--color-bg);
   color: var(--color-text);
-  padding: 10px 6px 8px;
+  padding: 14px 12px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
@@ -1457,64 +1448,16 @@ html.dark .pretty-success {
   opacity: 0.7;
 }
 
-/* mini visual previews inside the layout cards */
-.pv {
+/* mini visual previews inside the layout cards (inline SVG) */
+.mp-layout-preview {
+  display: block;
   width: 100%;
-  height: 64px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+}
+.pv-svg {
+  width: 100%;
+  height: auto;
+  display: block;
   color: currentColor;
-}
-.pv-top { display: flex; gap: 3px; flex: 1; }
-.pv-board {
-  flex: 1;
-  border: 1px solid currentColor;
-  border-radius: 2px;
-  display: grid;
-  grid-template-rows: repeat(3, 1fr);
-  gap: 1px;
-  padding: 1px;
-  opacity: 0.85;
-  grid-auto-flow: row;
-  grid-template-columns: repeat(5, 1fr);
-}
-.pv-board--big {
-  grid-template-rows: repeat(4, 1fr);
-  grid-template-columns: repeat(5, 1fr);
-  flex: 1;
-}
-.pv-cell {
-  background: currentColor;
-  opacity: 0.35;
-  border-radius: 1px;
-}
-.pv-tabs { display: flex; gap: 2px; }
-.pv-tab {
-  flex: 1;
-  height: 6px;
-  border: 1px solid currentColor;
-  border-radius: 1px;
-}
-.pv-tab--on { background: currentColor; }
-.pv-kbd {
-  height: 9px;
-  border: 1px solid currentColor;
-  border-radius: 1px;
-  display: flex;
-  gap: 1px;
-  padding: 1px;
-}
-.pv-key {
-  flex: 1;
-  background: currentColor;
-  opacity: 0.3;
-  border-radius: 1px;
-}
-.pv-chat {
-  height: 5px;
-  border: 1px solid currentColor;
-  border-radius: 1px;
 }
 
 /* ─────────────────────────────────────────────────────────────────

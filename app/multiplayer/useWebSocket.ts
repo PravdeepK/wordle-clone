@@ -24,10 +24,21 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const url =
-      typeof window !== "undefined" && window.location.hostname === "localhost"
-        ? "ws://localhost:3005"
-        : process.env.NEXT_PUBLIC_WS_URL ?? "";
+    const url = (() => {
+      if (typeof window === "undefined") return "";
+      const { hostname } = window.location;
+      const envUrl = process.env.NEXT_PUBLIC_WS_URL ?? "";
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return "ws://localhost:3005";
+      }
+      // Dev access from a phone/another device on the LAN: env URL still points at
+      // localhost, but localhost on the client device isn't the dev machine. Rewrite
+      // to the host that's serving the page.
+      if (/^(ws|wss):\/\/(localhost|127\.0\.0\.1)/.test(envUrl)) {
+        return `ws://${hostname}:3005`;
+      }
+      return envUrl;
+    })();
 
     function connect() {
       if (cancelled) return;
