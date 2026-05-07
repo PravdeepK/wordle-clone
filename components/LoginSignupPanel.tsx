@@ -51,6 +51,7 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const resolveEmail = async (identifier: string): Promise<string | null> => {
@@ -109,6 +110,7 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
         });
         await signOut(auth);
 
+        setPendingVerificationEmail(inputIdentifier);
         setIsLoginMode(true);
         setInputIdentifier("");
         setPassword("");
@@ -141,17 +143,41 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
         setError("Username not found.");
         return;
       }
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
-      await fetch("/api/send-verification-email", {
+      const res = await fetch("/api/send-verification-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      await signOut(auth);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Could not resend verification email.");
+        return;
+      }
       setNeedsVerification(false);
       setSuccessMsg("Verification email resent! Check your inbox.");
     } catch {
-      setError("Could not resend. Check your email and password and try again.");
+      setError("Could not resend. Please try again.");
+    }
+  };
+
+  const handleResendAfterSignup = async () => {
+    if (!pendingVerificationEmail) return;
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch("/api/send-verification-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingVerificationEmail }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Could not resend verification email.");
+        return;
+      }
+      setSuccessMsg("Verification email resent! Check your inbox (and spam folder).");
+    } catch {
+      setError("Could not resend verification email. Please try again.");
     }
   };
 
@@ -160,6 +186,7 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
     setError("");
     setSuccessMsg("");
     setNeedsVerification(false);
+    setPendingVerificationEmail("");
   };
 
   const cardCn = ["login-card", cardClassName].filter(Boolean).join(" ");
@@ -246,6 +273,16 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
 
         {error && <div className="pretty-error">{error}</div>}
         {successMsg && <div className="pretty-success">{successMsg}</div>}
+
+        {pendingVerificationEmail && isLoginMode && (
+          <button
+            type="button"
+            onClick={handleResendAfterSignup}
+            className="login-switch-mode"
+          >
+            Didn&apos;t receive the email? Click here to resend
+          </button>
+        )}
 
         <button onClick={handleAuth} className="restart-button login-submit" disabled={loading}>
           {loading ? "Please wait..." : isLoginMode ? "Login" : "Create Account"}

@@ -56,12 +56,14 @@ export async function POST(req: NextRequest) {
           <!-- Header -->
           <div style="background:#6aaa64;padding:32px 24px;text-align:center;">
             <!-- Wordle tiles -->
-            <div style="display:inline-flex;gap:6px;margin-bottom:12px;">
-              ${["W","O","R","D","L","E"].map((l, i) => {
-                const colors = ["#6aaa64","#c9b458","#6aaa64","#6aaa64","#c9b458","#6aaa64"];
-                return `<div style="width:40px;height:40px;background:${colors[i]};border:2px solid rgba(255,255,255,0.4);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#ffffff;line-height:40px;text-align:center;">${l}</div>`;
-              }).join("")}
-            </div>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 12px;border-collapse:separate;border-spacing:3px;">
+              <tr>
+                ${["W","O","R","D","L","E"].map((l, i) => {
+                  const colors = ["#6aaa64","#c9b458","#6aaa64","#6aaa64","#c9b458","#6aaa64"];
+                  return `<td width="40" height="40" style="width:40px;height:40px;background:${colors[i]};border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;font-family:'Helvetica Neue',Arial,sans-serif;mso-line-height-rule:exactly;line-height:40px;">${l}</td>`;
+                }).join("")}
+              </tr>
+            </table>
             <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:2px;text-transform:uppercase;">by Prav</div>
           </div>
 
@@ -101,8 +103,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    const e = err as { message?: string };
+    const e = err as { message?: string; code?: string };
     console.error("send-verification-email error:", e?.message);
+    if (e?.message?.includes("TOO_MANY_ATTEMPTS_TRY_LATER")) {
+      return NextResponse.json(
+        { error: "Too many verification emails sent for this address. Please wait a few minutes and try again." },
+        { status: 429 }
+      );
+    }
     return NextResponse.json({ error: "Failed to send verification email." }, { status: 500 });
   }
 }
