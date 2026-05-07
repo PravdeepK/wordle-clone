@@ -5,6 +5,8 @@ import crypto from "crypto";
 interface Room {
   host: WebSocket;
   guest: WebSocket | null;
+  hostUsername: string;
+  guestUsername: string | null;
   word: string;
   finished: { host: boolean; guest: boolean };
   timeout: ReturnType<typeof setTimeout>;
@@ -15,7 +17,26 @@ interface IncomingMessage {
   payload?: {
     roomId?: string;
     guess?: string;
+    length?: number;
+    username?: string;
+    text?: string;
   };
+}
+
+function sanitizeUsername(name: unknown): string {
+  if (typeof name !== "string") return "Player";
+  const trimmed = name.trim().slice(0, 24);
+  return trimmed || "Player";
+}
+
+const MIN_WORD_LENGTH = 3;
+const MAX_WORD_LENGTH = 10;
+const DEFAULT_WORD_LENGTH = 5;
+
+function clampLength(n: unknown): number {
+  const v = typeof n === "number" ? Math.floor(n) : NaN;
+  if (!Number.isFinite(v)) return DEFAULT_WORD_LENGTH;
+  return Math.min(MAX_WORD_LENGTH, Math.max(MIN_WORD_LENGTH, v));
 }
 
 const rooms: Record<string, Room> = {};
@@ -29,7 +50,11 @@ const API_ORIGIN =
 console.log("🔗 Wordle API origin is:", API_ORIGIN);
 
 function generateRoomId(): string {
-  return crypto.randomUUID().slice(0, 6);
+  return crypto.randomUUID().slice(0, 6).toUpperCase();
+}
+
+function normalizeRoomId(id: string | undefined): string | undefined {
+  return id?.trim().toUpperCase();
 }
 
 function deleteRoom(roomId: string, reason = "expired"): void {
@@ -46,14 +71,14 @@ function deleteRoom(roomId: string, reason = "expired"): void {
   console.log(`🧹 Room ${roomId} deleted (${reason})`);
 }
 
-async function fetchWordFromAPI(): Promise<string | null> {
+async function fetchWordFromAPI(length: number): Promise<string | null> {
   const url = `${API_ORIGIN}/api/word`;
-  console.log(`🎲 Fetching new word from ${url}…`);
+  console.log(`🎲 Fetching new ${length}-letter word from ${url}…`);
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ length: 5 }),
+      body: JSON.stringify({ length }),
     });
     if (!res.ok) throw new Error(`status ${res.status}`);
     const data = await res.json() as { word: string };
@@ -82,31 +107,51 @@ wss.on("connection", (socket: WebSocket) => {
 
     if (type === "create-room") {
       const roomId = generateRoomId();
+      const length = clampLength(payload?.length);
+      const hostUsername = sanitizeUsername(payload?.username);
       const timeout = setTimeout(() => deleteRoom(roomId), 10 * 60_000);
-      const word = await fetchWordFromAPI();
+      const word = await fetchWordFromAPI(length);
       if (!word) {
         socket.send(JSON.stringify({ type: "error", payload: "Could not generate word." }));
         return;
       }
-      rooms[roomId] = { host: socket, guest: null, word, finished: { host: false, guest: false }, timeout };
+      rooms[roomId] = {
+        host: socket,
+        guest: null,
+        hostUsername,
+        guestUsername: null,
+        word,
+        finished: { host: false, guest: false },
+        timeout,
+      };
       socket.send(JSON.stringify({ type: "room-created", payload: { roomId, word } }));
-      console.log(`🎲 Room ${roomId} created (word=${word})`);
+      console.log(`🎲 Room ${roomId} created by ${hostUsername} (word=${word})`);
     }
 
     if (type === "join-room" && payload?.roomId) {
-      const room = rooms[payload.roomId];
+      const roomId = normalizeRoomId(payload.roomId)!;
+      const room = rooms[roomId];
       if (room && !room.guest) {
+        const guestUsername = sanitizeUsername(payload?.username);
         room.guest = socket;
-        socket.send(JSON.stringify({ type: "room-joined", payload: { roomId: payload.roomId, word: room.word } }));
-        room.host.send(JSON.stringify({ type: "guest-joined" }));
-        console.log(`👤 Guest joined room ${payload.roomId}`);
+        room.guestUsername = guestUsername;
+        socket.send(JSON.stringify({
+          type: "room-joined",
+          payload: { roomId, word: room.word, opponentUsername: room.hostUsername },
+        }));
+        room.host.send(JSON.stringify({
+          type: "guest-joined",
+          payload: { opponentUsername: guestUsername },
+        }));
+        console.log(`👤 ${guestUsername} joined room ${roomId}`);
       } else {
         socket.send(JSON.stringify({ type: "room-expired" }));
       }
     }
 
     if (type === "send-guess" && payload?.roomId) {
-      const room = rooms[payload.roomId];
+      const roomId = normalizeRoomId(payload.roomId)!;
+      const room = rooms[roomId];
       if (room) {
         const out = JSON.stringify({ type: "guess", payload: { guess: payload.guess } });
         if (socket === room.host && room.guest) room.guest.send(out);
@@ -114,17 +159,30 @@ wss.on("connection", (socket: WebSocket) => {
       }
     }
 
+    if (type === "chat" && payload?.roomId) {
+      const roomId = normalizeRoomId(payload.roomId)!;
+      const room = rooms[roomId];
+      const text = typeof payload.text === "string" ? payload.text.trim().slice(0, 280) : "";
+      if (!room || !text) return;
+      const isHost = socket === room.host;
+      const from = isHost ? room.hostUsername : (room.guestUsername || "Player");
+      const out = JSON.stringify({ type: "chat", payload: { text, from } });
+      const peer = isHost ? room.guest : room.host;
+      peer?.send(out);
+    }
+
     if (type === "player-finished" && payload?.roomId) {
-      const room = rooms[payload.roomId];
+      const roomId = normalizeRoomId(payload.roomId)!;
+      const room = rooms[roomId];
       if (room) {
         const who: "host" | "guest" = socket === room.host ? "host" : "guest";
         room.finished[who] = true;
-        console.log(`🏁 ${who} finished in room ${payload.roomId}`);
+        console.log(`🏁 ${who} finished in room ${roomId}`);
         if (room.finished.host && room.finished.guest) {
           const cd = JSON.stringify({ type: "start-cooldown" });
           room.host?.send(cd);
           room.guest?.send(cd);
-          setTimeout(() => deleteRoom(payload.roomId!, "both finished"), 30_000);
+          setTimeout(() => deleteRoom(roomId, "both finished"), 30_000);
         }
       }
     }

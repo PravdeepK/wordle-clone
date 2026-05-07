@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { isAnthropicRateLimitError, withAnthropic429Retries } from "../../../lib/anthropic429Retry";
 import { rateLimit, clientIp } from "../../../lib/rateLimit";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
 export async function POST(request: Request) {
-  const limit = rateLimit(`validate:${clientIp(request)}`, 60, 60_000);
+  const limit = rateLimit(`validate:${clientIp(request)}`, 1000, 60_000);
   if (!limit.allowed) {
     return NextResponse.json(
       { valid: false, error: "Too many requests" },
@@ -20,28 +19,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ valid: false }, { status: 400 });
   }
 
-  try {
-    const message = await withAnthropic429Retries(() =>
-      client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 5,
-        messages: [
-          {
-            role: "user",
-            content: `Is "${word}" a valid English word? Reply only "yes" or "no".`,
-          },
-        ],
-      })
-    );
+  const clean = word.trim().toLowerCase().replace(/[^a-z]/g, "");
 
-    const verdict = (message.content[0] as { text: string }).text.toLowerCase().trim();
-    return NextResponse.json({ valid: verdict.startsWith("yes") });
-  } catch (err) {
-    if (isAnthropicRateLimitError(err)) {
-      console.warn("[api/validate] Anthropic rate limit after retries; rejecting guess.");
-    } else {
-      console.error("[api/validate] Anthropic error:", err);
-    }
-    return NextResponse.json({ valid: false });
+  try {
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 5,
+      messages: [
+        {
+          role: "user",
+          content: `Is "${clean}" something a typical English speaker would recognize as a word? Be permissive: accept dictionary words, plurals, conjugations, common slang, internet slang, informal terms, mild profanity, brand names that have entered common usage, and proper nouns people would know. Only reject pure gibberish or random letter combinations. Reply with only "yes" or "no".`,
+        },
+      ],
+    });
+
+    const reply = (message.content[0] as { text: string }).text.trim().toLowerCase();
+    return NextResponse.json({ valid: reply.startsWith("yes") });
+  } catch {
+    // Fail open so valid words aren't blocked on API errors
+    return NextResponse.json({ valid: true });
   }
 }

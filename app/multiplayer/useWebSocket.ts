@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 interface WebSocketOptions {
-  onRoomJoined?: (roomId: string, word: string) => void;
-  onGuestJoined?: () => void;
+  onRoomJoined?: (roomId: string, word: string, opponentUsername?: string) => void;
+  onGuestJoined?: (opponentUsername?: string) => void;
   onOpponentGuess?: (guess: string) => void;
   onPlayerFinished?: () => void;
+  onChat?: (text: string, from: string) => void;
 }
 
 const MAX_RETRIES = 5;
@@ -14,40 +15,44 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
-  const retriesRef = useRef(0);
-  const unmountedRef = useRef(false);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   useEffect(() => {
-    unmountedRef.current = false;
+    let cancelled = false;
+    let retries = 0;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const url =
       typeof window !== "undefined" && window.location.hostname === "localhost"
         ? "ws://localhost:3005"
         : process.env.NEXT_PUBLIC_WS_URL ?? "";
 
-    let ws: WebSocket;
-
     function connect() {
-      if (unmountedRef.current) return;
+      if (cancelled) return;
       ws = new WebSocket(url);
 
       ws.onopen = () => {
-        if (unmountedRef.current) { ws.close(); return; }
+        if (cancelled) { ws?.close(); return; }
         console.log("[WebSocket] Connected");
-        retriesRef.current = 0;
+        retries = 0;
         setSocket(ws);
         setConnected(true);
         setWsError(null);
       };
 
       ws.onmessage = (event: MessageEvent) => {
+        if (cancelled) return;
         try {
           const { type, payload } = JSON.parse(event.data as string);
-          if (type === "room-created")    options.onRoomJoined?.(payload.roomId, payload.word);
-          if (type === "room-joined")     options.onRoomJoined?.(payload.roomId, payload.word);
-          if (type === "guest-joined")    options.onGuestJoined?.();
-          if (type === "guess")           options.onOpponentGuess?.(payload.guess);
-          if (type === "player-finished") options.onPlayerFinished?.();
+          const opts = optionsRef.current;
+          if (type === "room-created")    opts.onRoomJoined?.(payload.roomId, payload.word, payload.opponentUsername);
+          if (type === "room-joined")     opts.onRoomJoined?.(payload.roomId, payload.word, payload.opponentUsername);
+          if (type === "guest-joined")    opts.onGuestJoined?.(payload?.opponentUsername);
+          if (type === "guess")           opts.onOpponentGuess?.(payload.guess);
+          if (type === "player-finished") opts.onPlayerFinished?.();
+          if (type === "chat")            opts.onChat?.(payload?.text ?? "", payload?.from ?? "Opponent");
           if (type === "room-expired")    setWsError("Room has expired. Please refresh and try again.");
         } catch (err) {
           console.warn("[WebSocket] Invalid message:", err);
@@ -59,14 +64,14 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
       };
 
       ws.onclose = () => {
-        if (unmountedRef.current) return;
+        if (cancelled) return;
         setConnected(false);
         setSocket(null);
-        if (retriesRef.current < MAX_RETRIES) {
-          retriesRef.current++;
-          console.log(`[WebSocket] Reconnecting (attempt ${retriesRef.current}/${MAX_RETRIES})`);
-          setWsError(`Connecting to server… (attempt ${retriesRef.current}/${MAX_RETRIES})`);
-          setTimeout(connect, RETRY_DELAY_MS);
+        if (retries < MAX_RETRIES) {
+          retries++;
+          console.log(`[WebSocket] Reconnecting (attempt ${retries}/${MAX_RETRIES})`);
+          setWsError(`Connecting to server… (attempt ${retries}/${MAX_RETRIES})`);
+          reconnectTimer = setTimeout(connect, RETRY_DELAY_MS);
         } else {
           setWsError("Could not connect to the multiplayer server. Make sure it is running and refresh.");
         }
@@ -76,7 +81,8 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
     connect();
 
     return () => {
-      unmountedRef.current = true;
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

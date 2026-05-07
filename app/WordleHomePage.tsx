@@ -50,7 +50,7 @@ export default function WordleHomePage() {
   } = useFlipAnimation();
 
   useEffect(() => {
-    const isLocalDev = typeof window !== "undefined" && window.location.hostname === "localhost";
+    const isLocalDev = process.env.NODE_ENV === "development";
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace("/login");
@@ -213,7 +213,7 @@ export default function WordleHomePage() {
   if (!username) return null;
 
   const gridLength = phase === "setup" ? pendingDifficulty : difficulty;
-  const tileSize = Math.min(62, Math.floor((460 - (gridLength - 1) * 5) / gridLength));
+  const tileSize = Math.min(62, Math.floor((520 - (gridLength - 1) * 5) / gridLength));
 
   return (
     <div className="page-wrapper">
@@ -238,6 +238,15 @@ export default function WordleHomePage() {
           <div className="setup-panel">
             <p className="setup-label">Pick a word length</p>
             <div className="setup-length-number">{pendingDifficulty}</div>
+            <div
+              className="setup-length-tiles"
+              style={{ "--setup-tile-size": `${Math.min(46, Math.max(30, Math.floor(420 / pendingDifficulty)))}px` } as React.CSSProperties}
+              aria-hidden="true"
+            >
+              {Array.from({ length: pendingDifficulty }).map((_, index) => (
+                <div key={index} className="setup-length-tile" />
+              ))}
+            </div>
             <div className="setup-range-row">
               <span>3</span>
               <input

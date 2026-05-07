@@ -32,18 +32,12 @@ export default function CustomWordPage() {
       return;
     }
 
-    try {
-      const response = await fetch("/api/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word }),
-      });
-      const data = await response.json();
-      if (!data.valid) {
-        setError("That's not a valid dictionary word.");
-        return;
-      }
+    if (!/^[A-Z]+$/.test(word)) {
+      setError("Word must contain only letters.");
+      return;
+    }
 
+    try {
       const docRef = await addDoc(collection(db, "customChallenges"), {
         word,
         timestamp: new Date(),

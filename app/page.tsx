@@ -9,12 +9,21 @@ export function generateMetadata() {
   if (isComingSoon) {
     return {
       title: "Wordle By Prav",
-      description: "Coming soon",
+      description: "Coming soon — a personal Wordle-style word game by Prav.",
+      openGraph: {
+        title: "Wordle By Prav",
+        description: "Coming soon — a personal Wordle-style word game by Prav.",
+      },
+      twitter: {
+        title: "Wordle By Prav",
+        description: "Coming soon — a personal Wordle-style word game by Prav.",
+      },
     };
   }
   return {
-    title: "Wordle",
-    description: "A Wordle clone",
+    title: "Wordle By Prav",
+    description:
+      "Guess the hidden word in six tries. Flexible word lengths, custom challenges, and real-time multiplayer.",
   };
 }
 

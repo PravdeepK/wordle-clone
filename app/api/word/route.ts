@@ -17,7 +17,7 @@ const fallbacks: Record<number, string> = {
 };
 
 export async function POST(req: Request) {
-  const limit = rateLimit(`word:${clientIp(req)}`, 30, 60_000);
+  const limit = rateLimit(`word:${clientIp(req)}`, 500, 60_000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many requests" },
@@ -28,15 +28,34 @@ export async function POST(req: Request) {
   const { length = 5 } = await req.json();
   const fallback = fallbacks[length as number] ?? "stone";
 
+  const letters = "abcdefghijklmnoprstuvwy";
+  const seedLetter = letters[Math.floor(Math.random() * letters.length)];
+  const categories = [
+    "an everyday object",
+    "a food or drink",
+    "an animal",
+    "a place or location",
+    "an action verb",
+    "a feeling or emotion",
+    "something in nature",
+    "a household item",
+    "a profession",
+    "a piece of clothing",
+    "a tool",
+    "a body part",
+  ];
+  const category = categories[Math.floor(Math.random() * categories.length)];
+
   try {
     const message = await withAnthropic429Retries(() =>
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 10,
+        max_tokens: 20,
+        temperature: 1,
         messages: [
           {
             role: "user",
-            content: `Give me one real English word that is exactly ${length} letters long. Return only the lowercase word, nothing else.`,
+            content: `Give me one real, common English word that is exactly ${length} letters long, starts with the letter "${seedLetter}", and refers to ${category}. Avoid obscure words. Return only the lowercase word, nothing else.`,
           },
         ],
       })
