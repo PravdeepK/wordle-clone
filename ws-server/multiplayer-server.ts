@@ -7,6 +7,8 @@ interface Room {
   guest: WebSocket | null;
   hostUsername: string;
   guestUsername: string | null;
+  hostColor: string;
+  guestColor: string;
   word: string;
   finished: { host: boolean; guest: boolean };
   timeout: ReturnType<typeof setTimeout>;
@@ -20,7 +22,16 @@ interface IncomingMessage {
     length?: number;
     username?: string;
     text?: string;
+    color?: string;
+    isTyping?: boolean;
   };
+}
+
+const DEFAULT_NAME_COLOR = "#4a90e2";
+
+function sanitizeColor(c: unknown): string {
+  if (typeof c !== "string") return DEFAULT_NAME_COLOR;
+  return /^#[0-9a-fA-F]{6}$/.test(c) ? c : DEFAULT_NAME_COLOR;
 }
 
 function sanitizeUsername(name: unknown): string {
@@ -103,6 +114,7 @@ wss.on("connection", (socket: WebSocket) => {
       const roomId = generateRoomId();
       const length = clampLength(payload?.length);
       const hostUsername = sanitizeUsername(payload?.username);
+      const hostColor = sanitizeColor(payload?.color);
       const timeout = setTimeout(() => deleteRoom(roomId), 10 * 60_000);
       const word = await fetchWordFromAPI(length);
       if (!word) {
@@ -114,6 +126,8 @@ wss.on("connection", (socket: WebSocket) => {
         guest: null,
         hostUsername,
         guestUsername: null,
+        hostColor,
+        guestColor: DEFAULT_NAME_COLOR,
         word,
         finished: { host: false, guest: false },
         timeout,
@@ -126,15 +140,17 @@ wss.on("connection", (socket: WebSocket) => {
       const room = rooms[roomId];
       if (room && !room.guest) {
         const guestUsername = sanitizeUsername(payload?.username);
+        const guestColor = sanitizeColor(payload?.color);
         room.guest = socket;
         room.guestUsername = guestUsername;
+        room.guestColor = guestColor;
         socket.send(JSON.stringify({
           type: "room-joined",
-          payload: { roomId, word: room.word, opponentUsername: room.hostUsername },
+          payload: { roomId, word: room.word, opponentUsername: room.hostUsername, opponentColor: room.hostColor },
         }));
         room.host.send(JSON.stringify({
           type: "guest-joined",
-          payload: { opponentUsername: guestUsername },
+          payload: { opponentUsername: guestUsername, opponentColor: guestColor },
         }));
       } else {
         socket.send(JSON.stringify({ type: "room-expired" }));
@@ -158,9 +174,24 @@ wss.on("connection", (socket: WebSocket) => {
       if (!room || !text) return;
       const isHost = socket === room.host;
       const from = isHost ? room.hostUsername : (room.guestUsername || "Player");
-      const out = JSON.stringify({ type: "chat", payload: { text, from } });
+      const color = isHost ? room.hostColor : room.guestColor;
+      const out = JSON.stringify({ type: "chat", payload: { text, from, color } });
       const peer = isHost ? room.guest : room.host;
       peer?.send(out);
+    }
+
+    if (type === "typing" && payload?.roomId) {
+      const roomId = normalizeRoomId(payload.roomId)!;
+      const room = rooms[roomId];
+      if (!room) return;
+      const isHost = socket === room.host;
+      const from = isHost ? room.hostUsername : (room.guestUsername || "Player");
+      const color = isHost ? room.hostColor : room.guestColor;
+      const peer = isHost ? room.guest : room.host;
+      peer?.send(JSON.stringify({
+        type: "typing",
+        payload: { from, color, isTyping: !!payload.isTyping },
+      }));
     }
 
     if (type === "player-finished" && payload?.roomId) {

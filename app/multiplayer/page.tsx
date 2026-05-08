@@ -17,6 +17,22 @@ import * as Sentry from "@sentry/nextjs";
 
 const MAX_TRIES = 6;
 
+const DEFAULT_NAME_COLOR = "#4a90e2";
+const NAME_COLORS: Array<{ id: string; hex: string; label: string }> = [
+  { id: "blue",   hex: "#4a90e2", label: "Blue" },
+  { id: "red",    hex: "#e25555", label: "Red" },
+  { id: "orange", hex: "#e2884a", label: "Orange" },
+  { id: "yellow", hex: "#d6b218", label: "Yellow" },
+  { id: "green",  hex: "#3fa84a", label: "Green" },
+  { id: "teal",   hex: "#2bb6a4", label: "Teal" },
+  { id: "purple", hex: "#8a4ae2", label: "Purple" },
+  { id: "pink",   hex: "#e24aa3", label: "Pink" },
+];
+
+function isValidNameColor(c: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(c);
+}
+
 export default function MultiplayerPage() {
   const router = useRouter();
   const db = getFirestore();
@@ -43,11 +59,15 @@ export default function MultiplayerPage() {
   const [mobileLayout, setMobileLayout] = useState<"split" | "tabs">("split");
   const [boardTab, setBoardTab] = useState<"you" | "opp">("you");
   const [isMobile, setIsMobile] = useState(false);
+  const [myColor, setMyColor] = useState<string>(DEFAULT_NAME_COLOR);
+  const [opponentColor, setOpponentColor] = useState<string>(DEFAULT_NAME_COLOR);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("mp.mobileLayout");
       if (saved === "split" || saved === "tabs") setMobileLayout(saved);
+      const savedColor = localStorage.getItem("mp.chatColor");
+      if (savedColor && isValidNameColor(savedColor)) setMyColor(savedColor);
     } catch {}
     const mql = window.matchMedia("(max-width: 760px)");
     const apply = () => setIsMobile(mql.matches);
@@ -61,7 +81,13 @@ export default function MultiplayerPage() {
     try { localStorage.setItem("mp.mobileLayout", next); } catch {}
   };
 
-  type ChatEntry = { id: number; kind: "system" | "user"; text: string; from?: string };
+  const updateMyColor = (next: string) => {
+    if (!isValidNameColor(next)) return;
+    setMyColor(next);
+    try { localStorage.setItem("mp.chatColor", next); } catch {}
+  };
+
+  type ChatEntry = { id: number; kind: "system" | "user"; text: string; from?: string; color?: string };
   const [chatLog, setChatLog] = useState<ChatEntry[]>([]);
   const [chatInput, setChatInput] = useState("");
   const chatIdRef = useRef(0);
@@ -70,15 +96,25 @@ export default function MultiplayerPage() {
   const pushSystem = (text: string) => {
     setChatLog((log) => [...log, { id: ++chatIdRef.current, kind: "system", text }]);
   };
-  const pushUser = (text: string, from: string) => {
-    setChatLog((log) => [...log, { id: ++chatIdRef.current, kind: "user", text, from }]);
+  const pushUser = (text: string, from: string, color?: string) => {
+    setChatLog((log) => [...log, { id: ++chatIdRef.current, kind: "user", text, from, color }]);
   };
+
+  const [oppTyping, setOppTyping] = useState<{ from: string; color: string } | null>(null);
+  const oppTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingSentRef = useRef<number>(0);
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [chatLog]);
+  }, [chatLog, oppTyping]);
+
+  useEffect(() => () => {
+    if (oppTypingTimerRef.current) clearTimeout(oppTypingTimerRef.current);
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+  }, []);
 
   const wordLength = word.length || selectedLength;
 
@@ -97,9 +133,10 @@ export default function MultiplayerPage() {
   }, [router]);
 
   const { sendJsonMessage, connected, wsError } = useWebSocket({
-    onRoomJoined: (newRoomId, newWord, oppName) => {
+    onRoomJoined: (newRoomId, newWord, oppName, oppColor) => {
       setRoomId(newRoomId);
       setWord(newWord.toUpperCase());
+      if (oppColor && isValidNameColor(oppColor)) setOpponentColor(oppColor);
       if (oppName) {
         setOpponentUsername(oppName);
         pushSystem(`Joined room ${newRoomId}. Playing against ${oppName}.`);
@@ -107,7 +144,8 @@ export default function MultiplayerPage() {
         pushSystem(`Room ${newRoomId} created. Waiting for an opponent…`);
       }
     },
-    onGuestJoined: (oppName) => {
+    onGuestJoined: (oppName, oppColor) => {
+      if (oppColor && isValidNameColor(oppColor)) setOpponentColor(oppColor);
       if (oppName) {
         setOpponentUsername(oppName);
         pushSystem(`${oppName} joined the room.`);
@@ -134,15 +172,60 @@ export default function MultiplayerPage() {
       setThemDone(true);
       pushSystem(`${opponentUsername} finished.`);
     },
-    onChat: (text, from) => pushUser(text, from),
+    onChat: (text, from, color) => {
+      pushUser(text, from, color && isValidNameColor(color) ? color : undefined);
+      // Receiving a chat message implies they stopped typing.
+      if (oppTypingTimerRef.current) clearTimeout(oppTypingTimerRef.current);
+      setOppTyping(null);
+    },
+    onTyping: (from, color, isTyping) => {
+      if (!isTyping) {
+        if (oppTypingTimerRef.current) clearTimeout(oppTypingTimerRef.current);
+        setOppTyping(null);
+        return;
+      }
+      const safeColor = isValidNameColor(color) ? color : DEFAULT_NAME_COLOR;
+      setOppTyping({ from, color: safeColor });
+      if (oppTypingTimerRef.current) clearTimeout(oppTypingTimerRef.current);
+      oppTypingTimerRef.current = setTimeout(() => setOppTyping(null), 3000);
+    },
   });
+
+  const sendTyping = (isTyping: boolean) => {
+    if (!roomId) return;
+    sendJsonMessage("typing", { roomId, isTyping });
+  };
+
+  const handleChatInputChange = (val: string) => {
+    setChatInput(val);
+    if (!roomId) return;
+    if (val.trim().length === 0) {
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+      sendTyping(false);
+      lastTypingSentRef.current = 0;
+      return;
+    }
+    const now = Date.now();
+    if (now - lastTypingSentRef.current > 1500) {
+      lastTypingSentRef.current = now;
+      sendTyping(true);
+    }
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    typingStopTimerRef.current = setTimeout(() => {
+      sendTyping(false);
+      lastTypingSentRef.current = 0;
+    }, 2000);
+  };
 
   const sendChat = () => {
     const text = chatInput.trim();
     if (!text || !roomId) return;
     sendJsonMessage("chat", { roomId, text });
-    pushUser(text, myUsername);
+    pushUser(text, myUsername, myColor);
     setChatInput("");
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    sendTyping(false);
+    lastTypingSentRef.current = 0;
   };
 
   const saveResult = async (result: string) => {
@@ -324,9 +407,12 @@ export default function MultiplayerPage() {
             </div>
 
             {entryTab === "settings" ? (
-              <MobileLayoutPicker value={mobileLayout} onChange={updateMobileLayout} />
+              <div className="mp-card">
+                <MobileLayoutPicker value={mobileLayout} onChange={updateMobileLayout} />
+                <ChatColorPicker value={myColor} onChange={updateMyColor} previewName={myUsername} />
+              </div>
             ) : (
-            <>
+            <div className="mp-card">
             <div className="setup-panel">
               <p className="setup-label">Pick a word length</p>
               <div className="setup-length-number">{selectedLength}</div>
@@ -358,7 +444,7 @@ export default function MultiplayerPage() {
 
             <button
               className="scoreboard-button"
-              onClick={() => sendJsonMessage("create-room", { length: selectedLength, username: myUsername })}
+              onClick={() => sendJsonMessage("create-room", { length: selectedLength, username: myUsername, color: myColor })}
               disabled={!connected}
             >
               Start Multiplayer Game
@@ -378,7 +464,7 @@ export default function MultiplayerPage() {
                   className="scoreboard-button"
                   disabled={!joinRoomId || !connected}
                   onClick={() => {
-                    sendJsonMessage("join-room", { roomId: joinRoomId, username: myUsername });
+                    sendJsonMessage("join-room", { roomId: joinRoomId, username: myUsername, color: myColor });
                     setShowJoinInput(false);
                   }}
                 >
@@ -397,7 +483,7 @@ export default function MultiplayerPage() {
                 Join a Room
               </button>
             )}
-            </>
+            </div>
             )}
           </div>
         ) : (
@@ -464,18 +550,33 @@ export default function MultiplayerPage() {
                 {chatLog.length === 0 ? (
                   <div className="chat-empty">Say hi to your opponent…</div>
                 ) : (
-                  chatLog.map((entry) => (
-                    <div key={entry.id} className={`chat-line chat-line--${entry.kind}`}>
-                      {entry.kind === "user" ? (
-                        <>
-                          <span className="chat-from">{entry.from}:</span>{" "}
+                  chatLog.map((entry) => {
+                    const fromColor = entry.kind === "user"
+                      ? entry.color
+                          ?? (entry.from === myUsername ? myColor : opponentColor)
+                      : undefined;
+                    return (
+                      <div key={entry.id} className={`chat-line chat-line--${entry.kind}`}>
+                        {entry.kind === "user" ? (
+                          <>
+                            <span className="chat-from" style={{ color: fromColor }}>{entry.from}:</span>{" "}
+                            <span className="chat-text">{entry.text}</span>
+                          </>
+                        ) : (
                           <span className="chat-text">{entry.text}</span>
-                        </>
-                      ) : (
-                        <span className="chat-text">{entry.text}</span>
-                      )}
-                    </div>
-                  ))
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+                {oppTyping && (
+                  <div className="chat-line chat-line--typing" aria-live="polite">
+                    <span className="chat-from" style={{ color: oppTyping.color }}>{oppTyping.from}</span>
+                    <span className="chat-typing-text"> is typing</span>
+                    <span className="chat-typing-dots" aria-hidden="true">
+                      <span></span><span></span><span></span>
+                    </span>
+                  </div>
                 )}
               </div>
               <form
@@ -489,7 +590,7 @@ export default function MultiplayerPage() {
                   className="chat-input"
                   type="text"
                   value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
+                  onChange={(e) => handleChatInputChange(e.target.value)}
                   placeholder="Send a message…"
                   maxLength={280}
                   aria-label="Chat message"
@@ -557,6 +658,56 @@ function MobileLayoutPicker({
           );
         })}
       </div>
+      <div className="mp-settings-foot">Saves immediately</div>
+    </div>
+  );
+}
+
+function ChatColorPicker({
+  value,
+  onChange,
+  previewName,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  previewName: string;
+}) {
+  return (
+    <div className="mp-settings-panel">
+      <div className="mp-settings-title">Chat name color</div>
+      <div className="mp-color-preview">
+        <span className="chat-from" style={{ color: value }}>{previewName}:</span>{" "}
+        <span className="chat-text">looks like this</span>
+      </div>
+      <div className="mp-color-row" role="radiogroup" aria-label="Chat name color presets">
+        {NAME_COLORS.map((c) => {
+          const selected = value.toLowerCase() === c.hex.toLowerCase();
+          return (
+            <button
+              key={c.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={c.label}
+              title={c.label}
+              className={`mp-color-swatch ${selected ? "mp-color-swatch--sel" : ""}`}
+              style={{ background: c.hex }}
+              onClick={() => onChange(c.hex)}
+            />
+          );
+        })}
+      </div>
+      <label className="mp-color-custom">
+        <span className="mp-color-custom-label">Custom</span>
+        <input
+          type="color"
+          className="mp-color-custom-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label="Pick a custom chat name color"
+        />
+        <span className="mp-color-custom-hex">{value.toUpperCase()}</span>
+      </label>
       <div className="mp-settings-foot">Saves immediately</div>
     </div>
   );
