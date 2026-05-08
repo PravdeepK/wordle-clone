@@ -90,17 +90,21 @@ button {
 ───────────────────────────────────────────────────────────────── */
 .page-wrapper {
   display: grid;
-  grid-template-rows: auto 1fr;
-  justify-items: center;
-  align-items: stretch;
+  /* minmax(0,1fr): lets the main row shrink so overflow scrolls inside .game-content (Safari / mobile) */
+  grid-template-rows: auto minmax(0, 1fr);
+  justify-items: stretch;
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
+  box-sizing: border-box;
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
 }
 
 .app-header-wrap {
-  width: 100%;
-  max-width: 560px;
+  justify-self: center;
+  width: min(560px, 100%);
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top);
 }
 
 /* Coming soon landing (NEXT_PUBLIC_COMING_SOON=true on prod) — tiles: WordleLogoTiles + .login-page */
@@ -398,22 +402,19 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
-  max-width: 560px;
-  padding: 12px 16px 32px;
+  justify-self: center;
+  width: min(560px, 100%);
+  padding: 12px 16px max(32px, env(safe-area-inset-bottom));
   gap: 10px;
   overflow-y: auto;
-  flex: 1;
   min-height: 0;
 }
 
-/* App pages: main column fills viewport below app header so .game-stage can center (NYT-style) */
+/* App pages: main column fills the grid row below header so .game-stage can center (NYT-style) */
 .game-content.game-content--centered,
 .game-content.game-content--wordle-home {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: calc(100svh - var(--game-header-app-total));
-  min-height: calc(100dvh - var(--game-header-app-total));
+  align-self: stretch;
+  height: 100%;
 }
 
 .game-stage {
@@ -948,8 +949,9 @@ html.dark .pretty-success {
   align-items: center;
   justify-content: center;
   gap: 24px;
-  padding: 24px 16px;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background-color: var(--color-bg);
+  box-sizing: border-box;
 }
 
 .login-tiles-stack {
@@ -1410,7 +1412,9 @@ html.dark .pretty-success {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 32px 16px;
+  width: 100%;
+  padding: 20px 12px;
+  box-sizing: border-box;
 }
 
 .room-id-join {
@@ -1523,6 +1527,117 @@ html.dark .pretty-success {
 .chat-line--user .chat-from {
   font-weight: 700;
   color: #4a90e2;
+}
+
+.chat-line--typing {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.chat-line--typing .chat-from {
+  font-weight: 700;
+  font-style: normal;
+}
+.chat-typing-text {
+  margin-left: 4px;
+}
+.chat-typing-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 4px;
+}
+.chat-typing-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: chat-typing-bounce 1.2s infinite ease-in-out;
+}
+.chat-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chat-typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+  40%           { transform: translateY(-3px); opacity: 1; }
+}
+
+.mp-color-preview {
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+}
+.mp-color-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+.mp-color-swatch {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.15s, box-shadow 0.15s;
+}
+.mp-color-swatch:hover {
+  transform: scale(1.08);
+}
+.mp-color-swatch:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+.mp-color-swatch--sel {
+  border-color: var(--color-text);
+  box-shadow: 0 0 0 2px var(--color-bg-card) inset;
+  transform: scale(1.08);
+}
+@media (max-width: 420px) {
+  .mp-color-row { grid-template-columns: repeat(4, 1fr); }
+}
+
+.mp-color-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  cursor: pointer;
+}
+.mp-color-custom-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.mp-color-custom-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+.mp-color-custom-input::-webkit-color-swatch-wrapper { padding: 0; }
+.mp-color-custom-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+.mp-color-custom-input::-moz-color-swatch { border: none; border-radius: 50%; }
+.mp-color-custom-hex {
+  margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
 }
 
 .chat-input-row {
@@ -1648,7 +1763,7 @@ html.dark .pretty-success {
   }
 
   .game-content {
-    padding: 8px 10px 24px;
+    padding: 8px 10px max(24px, env(safe-area-inset-bottom));
     gap: 8px;
   }
 
@@ -1774,6 +1889,38 @@ html.dark .pretty-success {
   flex-direction: column;
   gap: 14px;
 }
+
+.mp-card {
+  margin-top: 0;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background-color: var(--color-bg-card);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+html.dark .mp-card {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.mp-card .setup-panel {
+  padding: 0;
+}
+
+.mp-card .mp-settings-panel {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 100%;
+}
 .mp-settings-title {
   text-align: center;
   font-size: 0.7rem;
@@ -1879,6 +2026,9 @@ html.dark .pretty-success {
 /* Layout A · split on mobile: force two boards side-by-side
    even on narrow screens. */
 @media (max-width: 760px) {
+  .multiplayer-lobby {
+    padding: 12px 8px;
+  }
   .multiplayer-boards--split-mobile {
     flex-direction: row;
     align-items: flex-start;
