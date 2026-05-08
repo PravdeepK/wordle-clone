@@ -298,7 +298,8 @@ export default function MultiplayerPage() {
     <div className="page-wrapper">
       <AppHeader title="Multiplayer" backHref="/" greetingName={myUsername} />
 
-      <div className="game-content">
+      <div className="game-content game-content--centered">
+        <div className="game-stage">
         {wsError && <p className="error-message">{wsError}</p>}
 
         {!roomId ? (
@@ -501,6 +502,7 @@ export default function MultiplayerPage() {
           </>
         )}
 
+        </div>
       </div>
     </div>
   );

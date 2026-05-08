@@ -78,7 +78,10 @@ export const Icon = {
 };
 
 type AppHeaderProps = {
+  /** Full page name (used for accessibility when `titleShort` is set) */
   title: string;
+  /** Optional compact label for the top bar on small screens (avoids truncation) */
+  titleShort?: string;
   /** Override default back behavior. If omitted, no back button. */
   onBack?: () => void;
   /** Show a back button that pushes "/" (default for sub-pages). Ignored if onBack is provided. */
@@ -118,6 +121,7 @@ function MenuItem({ icon, label, onClick, danger, disabled, active }: MenuItemPr
 
 export default function AppHeader({
   title,
+  titleShort,
   onBack,
   backHref,
   onNewGame,
@@ -152,9 +156,12 @@ export default function AppHeader({
   const handleBack = onBack ?? (backHref ? () => router.push(backHref) : undefined);
   const isHome = pathname === "/";
 
+  const displayTitle = titleShort ?? title;
+  const titleId = "app-header-title";
+
   return (
-    <>
-      <header className="game-header game-header--app">
+    <div className="app-header-wrap">
+      <header className="game-header game-header--app" aria-labelledby={titleId}>
         <div className="game-header-left">
           {handleBack && (
             <button
@@ -168,7 +175,13 @@ export default function AppHeader({
             </button>
           )}
         </div>
-        <h1 className="title">{title}</h1>
+        <h1
+          className="title"
+          id={titleId}
+          aria-label={titleShort ? title : undefined}
+        >
+          {displayTitle}
+        </h1>
         <div className="game-header-right" ref={menuRef}>
           <button
             type="button"
@@ -243,6 +256,6 @@ export default function AppHeader({
         onClose={() => setFeedbackOpen(false)}
         defaultIdentifier={feedbackIdentifier}
       />
-    </>
+    </div>
   );
 }
