@@ -968,14 +968,37 @@ html.dark .pretty-success {
   width: 44px;
   height: 44px;
   font-size: 1.4rem;
-  border: none;
+  border: 2px solid var(--color-tile-filled);
   border-radius: 2px;
+  background-color: transparent;
+  color: var(--color-text);
 }
 
-/* Header tiles: white text on both green and yellow */
-.login-tiles > .cell.bg-yellow-500,
-.login-tiles > .cell.bg-green-500 {
-  color: #fff !important;
+.login-tile--reveal {
+  animation: loginTileReveal 500ms ease forwards;
+}
+
+@keyframes loginTileReveal {
+  0% {
+    transform: rotateX(0deg);
+  }
+  50% {
+    transform: rotateX(-90deg);
+    background-color: transparent;
+    border-color: var(--color-tile-filled);
+    color: var(--color-text);
+  }
+  50.01% {
+    background-color: var(--reveal-bg);
+    border-color: var(--reveal-bg);
+    color: #fff;
+  }
+  100% {
+    transform: rotateX(0deg);
+    background-color: var(--reveal-bg);
+    border-color: var(--reveal-bg);
+    color: #fff;
+  }
 }
 
 .login-card {

@@ -1,56 +1,75 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, CSSProperties } from "react";
 
-const TILE_COLOR_CLASSES = ["bg-green-500", "bg-yellow-500", "bg-gray-400"] as const;
+const COLOR_VARS = ["--color-correct", "--color-present", "--color-absent"] as const;
+type ColorVar = (typeof COLOR_VARS)[number];
 
-function randomTileColors(length: number): string[] {
-  return Array.from({ length }, () => {
-    const pick = TILE_COLOR_CLASSES[Math.floor(Math.random() * TILE_COLOR_CLASSES.length)];
-    return pick;
-  });
+function randomColors(length: number): ColorVar[] {
+  return Array.from({ length }, () => COLOR_VARS[Math.floor(Math.random() * COLOR_VARS.length)]);
 }
 
-/** Same on server + first client paint — avoids hydration mismatch; random runs in useEffect. */
-const STATIC_LOGO_COLOR_ROW: string[] = [
-  "bg-green-500",
-  "bg-yellow-500",
-  "bg-gray-400",
-  "bg-green-500",
-  "bg-yellow-500",
-  "bg-green-500",
-];
+const FLIP_STAGGER_MS = 250;
+const FLIP_DURATION_MS = 500;
+const ROW_GAP_MS = 200;
 
-function TileRow({ text, colors }: { text: string; colors: string[] }) {
+function TileRow({
+  text,
+  colors,
+  revealed,
+  startDelayMs,
+}: {
+  text: string;
+  colors: ColorVar[];
+  revealed: boolean;
+  startDelayMs: number;
+}) {
   return (
     <div className="login-tiles">
-      {text.split("").map((char, i) => (
-        <div key={i} className={`cell login-tile ${colors[i]}`}>
-          {char === " " ? "\u00A0" : char}
-        </div>
-      ))}
+      {text.split("").map((char, i) => {
+        const style: CSSProperties = {
+          ["--reveal-bg" as never]: `var(${colors[i]})`,
+        };
+        if (revealed) {
+          style.animationDelay = `${startDelayMs + i * FLIP_STAGGER_MS}ms`;
+        }
+        return (
+          <div
+            key={i}
+            className={`cell login-tile${revealed ? " login-tile--reveal" : ""}`}
+            style={style}
+          >
+            {char === " " ? " " : char}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-/** Two-row WORDLE / BYPRAV header; colors match login (static SSR, then randomized on client). */
+/** Two-row WORDLE / BYPRAV header that flips in like a played Wordle row. */
 export default function WordleLogoTiles() {
-  const [logoColors, setLogoColors] = useState(() => ({
-    wordle: [...STATIC_LOGO_COLOR_ROW],
-    byprav: [...STATIC_LOGO_COLOR_ROW],
+  const [revealed, setRevealed] = useState(false);
+  const [colors, setColors] = useState<{ wordle: ColorVar[]; byprav: ColorVar[] }>(() => ({
+    wordle: Array(6).fill("--color-absent") as ColorVar[],
+    byprav: Array(6).fill("--color-absent") as ColorVar[],
   }));
 
   useEffect(() => {
-    setLogoColors({
-      wordle: randomTileColors("WORDLE".length),
-      byprav: randomTileColors("BYPRAV".length),
+    setColors({
+      wordle: randomColors("WORDLE".length),
+      byprav: randomColors("BYPRAV".length),
     });
+    const t = window.setTimeout(() => setRevealed(true), 200);
+    return () => window.clearTimeout(t);
   }, []);
+
+  const row2Start = (("WORDLE".length - 1) * FLIP_STAGGER_MS) + FLIP_DURATION_MS + ROW_GAP_MS;
 
   return (
     <div className="login-tiles-stack" aria-hidden>
-      <TileRow text="WORDLE" colors={logoColors.wordle} />
-      <TileRow text="BYPRAV" colors={logoColors.byprav} />
+      <TileRow text="WORDLE" colors={colors.wordle} revealed={revealed} startDelayMs={0} />
+      <TileRow text="BYPRAV" colors={colors.byprav} revealed={revealed} startDelayMs={row2Start} />
     </div>
   );
 }
