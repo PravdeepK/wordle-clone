@@ -3,6 +3,7 @@ import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { Resend } from "resend";
 import { rateLimit, clientIp } from "../../../lib/rateLimit";
+import * as Sentry from "@sentry/nextjs";
 
 function getAdminApp() {
   if (getApps().length > 0) return getApps()[0];
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const e = err as { message?: string; code?: string };
-    console.error("send-verification-email error:", e?.message);
+    Sentry.captureException(err);
     if (e?.message?.includes("TOO_MANY_ATTEMPTS_TRY_LATER")) {
       return NextResponse.json(
         { error: "Too many verification emails sent for this address. Please wait a few minutes and try again." },

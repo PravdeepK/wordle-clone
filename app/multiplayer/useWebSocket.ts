@@ -46,7 +46,6 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
 
       ws.onopen = () => {
         if (cancelled) { ws?.close(); return; }
-        console.log("[WebSocket] Connected");
         retries = 0;
         setSocket(ws);
         setConnected(true);
@@ -65,13 +64,13 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
           if (type === "player-finished") opts.onPlayerFinished?.();
           if (type === "chat")            opts.onChat?.(payload?.text ?? "", payload?.from ?? "Opponent");
           if (type === "room-expired")    setWsError("Room has expired. Please refresh and try again.");
-        } catch (err) {
-          console.warn("[WebSocket] Invalid message:", err);
+        } catch {
+          // Malformed payload from server; ignore and keep the socket open.
         }
       };
 
       ws.onerror = () => {
-        console.warn("[WebSocket] Connection failed, will retry…");
+        // Connection failure is surfaced to the user via wsError on close.
       };
 
       ws.onclose = () => {
@@ -80,7 +79,6 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
         setSocket(null);
         if (retries < MAX_RETRIES) {
           retries++;
-          console.log(`[WebSocket] Reconnecting (attempt ${retries}/${MAX_RETRIES})`);
           setWsError(`Connecting to server… (attempt ${retries}/${MAX_RETRIES})`);
           reconnectTimer = setTimeout(connect, RETRY_DELAY_MS);
         } else {

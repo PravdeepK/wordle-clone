@@ -47,8 +47,6 @@ const API_ORIGIN =
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000");
 
-console.log("🔗 Wordle API origin is:", API_ORIGIN);
-
 function generateRoomId(): string {
   return crypto.randomUUID().slice(0, 6).toUpperCase();
 }
@@ -57,7 +55,7 @@ function normalizeRoomId(id: string | undefined): string | undefined {
   return id?.trim().toUpperCase();
 }
 
-function deleteRoom(roomId: string, reason = "expired"): void {
+function deleteRoom(roomId: string): void {
   const room = rooms[roomId];
   if (!room) return;
   try {
@@ -68,12 +66,10 @@ function deleteRoom(roomId: string, reason = "expired"): void {
   } catch { /* ignore */ }
   clearTimeout(room.timeout);
   delete rooms[roomId];
-  console.log(`🧹 Room ${roomId} deleted (${reason})`);
 }
 
 async function fetchWordFromAPI(length: number): Promise<string | null> {
   const url = `${API_ORIGIN}/api/word`;
-  console.log(`🎲 Fetching new ${length}-letter word from ${url}…`);
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -82,10 +78,9 @@ async function fetchWordFromAPI(length: number): Promise<string | null> {
     });
     if (!res.ok) throw new Error(`status ${res.status}`);
     const data = await res.json() as { word: string };
-    console.log("✅ Got word:", data.word);
     return data.word;
   } catch (err) {
-    console.error("❌ Failed to fetch word from API:", (err as Error).message);
+    console.error("Failed to fetch word from API:", (err as Error).message);
     return null;
   }
 }
@@ -99,7 +94,6 @@ wss.on("connection", (socket: WebSocket) => {
     try {
       parsed = JSON.parse(msg.toString()) as IncomingMessage;
     } catch {
-      console.warn("⚠️  Invalid JSON from client:", msg);
       return;
     }
 
@@ -125,7 +119,6 @@ wss.on("connection", (socket: WebSocket) => {
         timeout,
       };
       socket.send(JSON.stringify({ type: "room-created", payload: { roomId, word } }));
-      console.log(`🎲 Room ${roomId} created by ${hostUsername} (word=${word})`);
     }
 
     if (type === "join-room" && payload?.roomId) {
@@ -143,7 +136,6 @@ wss.on("connection", (socket: WebSocket) => {
           type: "guest-joined",
           payload: { opponentUsername: guestUsername },
         }));
-        console.log(`👤 ${guestUsername} joined room ${roomId}`);
       } else {
         socket.send(JSON.stringify({ type: "room-expired" }));
       }
@@ -177,12 +169,11 @@ wss.on("connection", (socket: WebSocket) => {
       if (room) {
         const who: "host" | "guest" = socket === room.host ? "host" : "guest";
         room.finished[who] = true;
-        console.log(`🏁 ${who} finished in room ${roomId}`);
         if (room.finished.host && room.finished.guest) {
           const cd = JSON.stringify({ type: "start-cooldown" });
           room.host?.send(cd);
           room.guest?.send(cd);
-          setTimeout(() => deleteRoom(roomId, "both finished"), 30_000);
+          setTimeout(() => deleteRoom(roomId), 30_000);
         }
       }
     }
@@ -192,7 +183,7 @@ wss.on("connection", (socket: WebSocket) => {
     for (const id in rooms) {
       const { host, guest } = rooms[id];
       if (host === socket || guest === socket) {
-        deleteRoom(id, "disconnect");
+        deleteRoom(id);
         break;
       }
     }
@@ -200,6 +191,4 @@ wss.on("connection", (socket: WebSocket) => {
 });
 
 const PORT = process.env.PORT ?? 3005;
-server.listen(PORT, () => {
-  console.log(`🟢 WebSocket server up on ws://localhost:${PORT}`);
-});
+server.listen(PORT);

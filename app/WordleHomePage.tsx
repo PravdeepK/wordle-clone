@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
+import * as Sentry from "@sentry/nextjs";
 import { checkGuess } from "../lib/wordle";
 import { validateWord } from "../lib/validateWord";
 import { useGlobalGuessKeyboard } from "../hooks/useGlobalGuessKeyboard";
@@ -84,7 +85,7 @@ export default function WordleHomePage() {
         { word: secretWord, result, timestamp: new Date() }
       );
     } catch (err) {
-      console.error("Failed to save game result:", err);
+      Sentry.captureException(err);
     }
   };
 

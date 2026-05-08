@@ -13,6 +13,7 @@ import AppHeader from "../../components/AppHeader";
 import useWebSocket from "./useWebSocket";
 import { useGlobalGuessKeyboard } from "../../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../../hooks/useFlipAnimation";
+import * as Sentry from "@sentry/nextjs";
 
 const MAX_TRIES = 6;
 
@@ -152,7 +153,7 @@ export default function MultiplayerPage() {
         { word, result, multiplayer: true, timestamp: new Date() }
       );
     } catch (e) {
-      console.error("Failed to save result:", e);
+      Sentry.captureException(e);
     }
   };
 

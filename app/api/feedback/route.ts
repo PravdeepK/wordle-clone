@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { rateLimit, clientIp } from "../../../lib/rateLimit";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -136,8 +137,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, ticketId });
   } catch (err) {
-    const e = err as { message?: string };
-    console.error("feedback send error:", e?.message);
+    Sentry.captureException(err);
     return NextResponse.json(
       { error: "Failed to submit feedback. Please try again later." },
       { status: 500 }
