@@ -225,7 +225,7 @@ export default function WordleHomePage() {
         greetingName={username}
       />
 
-      <div className="game-content game-content--wordle-home">
+      <div className="game-content game-content--centered">
         <div className="game-stage">
           {phase === "setup" ? (
             <div className="setup-panel setup-panel--card">

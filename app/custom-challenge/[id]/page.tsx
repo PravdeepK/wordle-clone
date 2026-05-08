@@ -147,11 +147,13 @@ export default function CustomChallengePage() {
   if (challengeExpired) {
     return (
       <div className="page-wrapper">
-        <AppHeader title="Challenge Expired" backHref="/" />
-        <div className="game-content">
-          <p style={{ color: "var(--color-text-muted)" }}>
-            This challenge link has already been used or does not exist.
-          </p>
+        <AppHeader title="Challenge expired" titleShort="Expired" backHref="/" />
+        <div className="game-content game-content--centered">
+          <div className="game-stage">
+            <p style={{ color: "var(--color-text-muted)" }}>
+              This challenge link has already been used or does not exist.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -164,9 +166,10 @@ export default function CustomChallengePage() {
 
   return (
     <div className="page-wrapper">
-      <AppHeader title="Custom Challenge" backHref="/" />
+      <AppHeader title="Custom challenge" titleShort="Custom" backHref="/" />
 
-      <div className="game-content">
+      <div className="game-content game-content--centered">
+        <div className="game-stage">
         <div className="grid" style={{ '--tile-size': `${tileSize}px` } as React.CSSProperties}>
           {guesses.map((guess, rowIndex) => {
             const committedCount = guesses.filter((g) => g !== "").length;
@@ -241,6 +244,7 @@ export default function CustomChallengePage() {
         )}
 
         <button onClick={() => router.push("/")} className="restart-button">Back to Game</button>
+        </div>
       </div>
     </div>
   );

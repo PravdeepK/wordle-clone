@@ -158,80 +158,110 @@ export default function Scoreboard() {
     <div className="page-wrapper">
       <AppHeader title="Scoreboard" backHref="/" />
 
-      <div className="game-content">
-        {/* Game Modes */}
-        <div className="scoreboard-filter-group">
-          <button
-            className={`scoreboard-button ${activeTab === "all" ? "active-button" : ""}`}
-            onClick={() => {
-              setActiveTab("all");
-              setDifficultyFilter("all");
-            }}
-          >
-            All Game Modes
-          </button>
-          {[...Array(8)].map((_, i) => {
-            const len = (i + 3).toString();
-            return (
+      <div className="game-content game-content--centered">
+        <div className="game-stage">
+        {/* Stats summary */}
+        {games.length > 0 && (() => {
+          const wins = games.filter((g) => g.result === "win").length;
+          const winRate = Math.round((wins / games.length) * 100);
+          return (
+            <div className="scoreboard-stats">
+              <div className="scoreboard-stat">
+                <span className="scoreboard-stat-value">{games.length}</span>
+                <span className="scoreboard-stat-label">Played</span>
+              </div>
+              <div className="scoreboard-stat">
+                <span className="scoreboard-stat-value">{wins}</span>
+                <span className="scoreboard-stat-label">Wins</span>
+              </div>
+              <div className="scoreboard-stat">
+                <span className="scoreboard-stat-value">{winRate}%</span>
+                <span className="scoreboard-stat-label">Win Rate</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Filters card */}
+        <div className="scoreboard-filters-card">
+          <div className="scoreboard-filter-section">
+            <p className="setup-label">Game Mode</p>
+            <div className="scoreboard-filter-group">
               <button
-                key={len}
-                className={`scoreboard-button ${difficultyFilter === len ? "active-button" : ""}`}
+                className={`scoreboard-chip ${activeTab === "all" ? "active-button" : ""}`}
                 onClick={() => {
-                  setDifficultyFilter(len);
+                  setActiveTab("all");
+                  setDifficultyFilter("all");
+                }}
+              >
+                All
+              </button>
+              {[...Array(8)].map((_, i) => {
+                const len = (i + 3).toString();
+                return (
+                  <button
+                    key={len}
+                    className={`scoreboard-chip ${difficultyFilter === len ? "active-button" : ""}`}
+                    onClick={() => {
+                      setDifficultyFilter(len);
+                      setActiveTab("solo");
+                    }}
+                  >
+                    {len}
+                  </button>
+                );
+              })}
+              <button
+                className={`scoreboard-chip ${
+                  difficultyFilter === "custom" && activeTab === "solo" ? "active-button" : ""
+                }`}
+                onClick={() => {
+                  setDifficultyFilter("custom");
                   setActiveTab("solo");
                 }}
               >
-                {len} Letters
+                Custom
               </button>
-            );
-          })}
-          <button
-            className={`scoreboard-button ${
-              difficultyFilter === "custom" && activeTab === "solo" ? "active-button" : ""
-            }`}
-            onClick={() => {
-              setDifficultyFilter("custom");
-              setActiveTab("solo");
-            }}
-          >
-            Custom
-          </button>
-          <button
-            className={`scoreboard-button ${activeTab === "multiplayer" ? "active-button" : ""}`}
-            onClick={() => {
-              setActiveTab("multiplayer");
-              setDifficultyFilter("all");
-            }}
-          >
-            Multiplayer
-          </button>
-        </div>
+              <button
+                className={`scoreboard-chip ${activeTab === "multiplayer" ? "active-button" : ""}`}
+                onClick={() => {
+                  setActiveTab("multiplayer");
+                  setDifficultyFilter("all");
+                }}
+              >
+                Multiplayer
+              </button>
+            </div>
+          </div>
 
-        {/* Results */}
-        <div className="scoreboard-filter-group">
-          <button
-            className={`scoreboard-button ${resultFilter === "all" ? "active-button" : ""}`}
-            onClick={() => setResultFilter("all")}
-          >
-            All Results
-          </button>
-          <button
-            className={`scoreboard-button ${resultFilter === "win" ? "active-button" : ""}`}
-            onClick={() => setResultFilter("win")}
-          >
-            Wins
-          </button>
-          <button
-            className={`scoreboard-button ${resultFilter === "lose" ? "active-button" : ""}`}
-            onClick={() => setResultFilter("lose")}
-          >
-            Losses
-          </button>
+          <div className="scoreboard-filter-section">
+            <p className="setup-label">Result</p>
+            <div className="scoreboard-filter-group">
+              <button
+                className={`scoreboard-chip ${resultFilter === "all" ? "active-button" : ""}`}
+                onClick={() => setResultFilter("all")}
+              >
+                All
+              </button>
+              <button
+                className={`scoreboard-chip ${resultFilter === "win" ? "active-button" : ""}`}
+                onClick={() => setResultFilter("win")}
+              >
+                Wins
+              </button>
+              <button
+                className={`scoreboard-chip ${resultFilter === "lose" ? "active-button" : ""}`}
+                onClick={() => setResultFilter("lose")}
+              >
+                Losses
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* List */}
         {filtered.length === 0 ? (
-          <p style={{ color: "var(--color-text-muted)" }}>No games found.</p>
+          <p className="scoreboard-empty">No games found.</p>
         ) : (
           <ul className="scoreboard-list">
             {filtered.map((g) => (
@@ -239,9 +269,9 @@ export default function Scoreboard() {
                 key={g.id}
                 className={`scoreboard-item ${g.result === "win" ? "scoreboard-item--win" : "scoreboard-item--loss"}`}
               >
-                <span style={{ fontWeight: 700 }}>{g.result === "win" ? "\u2713" : "\u2717"}</span>
+                <span className="scoreboard-result-icon">{g.result === "win" ? "\u2713" : "\u2717"}</span>
                 <span className="scoreboard-word">{g.word}</span>
-                <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem", marginLeft: "auto" }}>
+                <span className="scoreboard-meta">
                   {g.difficulty === "custom"
                     ? "Custom"
                     : g.difficulty === "multiplayer"
@@ -249,18 +279,19 @@ export default function Scoreboard() {
                     : `${g.difficulty} letters`}
                 </span>
                 {g.multiplayer && g.player && (
-                  <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>
-                    vs {g.player}
-                  </span>
+                  <span className="scoreboard-meta">vs {g.player}</span>
                 )}
               </li>
             ))}
           </ul>
         )}
 
-        <button className="restart-button" onClick={resetScoreboard}>
-          Reset Scoreboard
-        </button>
+        {games.length > 0 && (
+          <button className="scoreboard-reset" onClick={resetScoreboard}>
+            Reset Scoreboard
+          </button>
+        )}
+        </div>
       </div>
     </div>
   );

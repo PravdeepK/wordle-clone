@@ -51,39 +51,46 @@ export default function CustomWordPage() {
 
   return (
     <div className="page-wrapper">
-      <AppHeader title="Custom Challenge" backHref="/" />
+      <AppHeader title="Custom challenge" titleShort="Custom" backHref="/" />
 
-      <div className="game-content">
-        <input
-          type="text"
-          value={customWord}
-          onChange={(e) => setCustomWord(e.target.value.toUpperCase())}
-          className="input-box"
-          placeholder="Enter a word"
-          maxLength={10}
-        />
+      <div className="game-content game-content--centered">
+        <div className="game-stage">
+          <div className="setup-panel setup-panel--card">
+            <p className="setup-label">Pick a word (3–10 letters)</p>
+            <input
+              type="text"
+              value={customWord}
+              onChange={(e) => setCustomWord(e.target.value.toUpperCase())}
+              className="input-box"
+              placeholder="Enter a word"
+              maxLength={10}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") createChallenge();
+              }}
+            />
 
-        {error && <p className="error-message">{error}</p>}
+            {error && <p className="error-message">{error}</p>}
 
-        <button onClick={createChallenge} className="restart-button">
-          Create Challenge
-        </button>
-
-        {challengeLink && (
-          <div className="challenge-link-box">
-            <p className="win-message">Challenge created!</p>
-            <p style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>Share this link:</p>
-            <a href={challengeLink} target="_blank" rel="noreferrer">{challengeLink}</a>
-            <button
-              className="scoreboard-button"
-              style={{ marginTop: 4 }}
-              onClick={() => navigator.clipboard.writeText(challengeLink)}
-            >
-              Copy Link
+            <button onClick={createChallenge} className="restart-button setup-start-btn">
+              Create Challenge
             </button>
-          </div>
-        )}
 
+            {challengeLink && (
+              <div className="challenge-link-box">
+                <p className="win-message">Challenge created!</p>
+                <p style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>Share this link:</p>
+                <a href={challengeLink} target="_blank" rel="noreferrer">{challengeLink}</a>
+                <button
+                  className="scoreboard-button"
+                  style={{ marginTop: 4 }}
+                  onClick={() => navigator.clipboard.writeText(challengeLink)}
+                >
+                  Copy Link
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
