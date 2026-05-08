@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { isAnthropicRateLimitError, withAnthropic429Retries } from "../../../lib/anthropic429Retry";
 import { rateLimit, clientIp } from "../../../lib/rateLimit";
+import * as Sentry from "@sentry/nextjs";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
@@ -67,16 +68,13 @@ export async function POST(req: Request) {
       .toLowerCase();
 
     if (word.length !== length) {
-      console.warn(`Wrong length from Haiku: "${word}", using fallback`);
       word = fallback;
     }
 
     return NextResponse.json({ word });
   } catch (err) {
-    if (isAnthropicRateLimitError(err)) {
-      console.warn("[api/word] Anthropic rate limit after retries; using fallback.");
-    } else {
-      console.error("[api/word] Anthropic error:", err);
+    if (!isAnthropicRateLimitError(err)) {
+      Sentry.captureException(err);
     }
     return NextResponse.json({ word: fallback });
   }

@@ -6,6 +6,7 @@ import { addDoc, collection, getFirestore } from "firebase/firestore";
 import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import AppHeader from "../../components/AppHeader";
 
 const db = getFirestore();
 
@@ -50,9 +51,7 @@ export default function CustomWordPage() {
 
   return (
     <div className="page-wrapper">
-      <header className="game-header">
-        <h1 className="title">Custom Challenge</h1>
-      </header>
+      <AppHeader title="Custom Challenge" backHref="/" />
 
       <div className="game-content">
         <input
@@ -85,9 +84,6 @@ export default function CustomWordPage() {
           </div>
         )}
 
-        <button className="scoreboard-button" onClick={() => router.push("/")}>
-          Back to Game
-        </button>
       </div>
     </div>
   );

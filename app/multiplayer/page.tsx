@@ -9,9 +9,11 @@ import { checkGuess } from "../../lib/wordle";
 import { validateWord } from "../../lib/validateWord";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import VirtualKeyboard from "../../components/VirtualKeyboard";
+import AppHeader from "../../components/AppHeader";
 import useWebSocket from "./useWebSocket";
 import { useGlobalGuessKeyboard } from "../../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../../hooks/useFlipAnimation";
+import * as Sentry from "@sentry/nextjs";
 
 const MAX_TRIES = 6;
 
@@ -37,6 +39,27 @@ export default function MultiplayerPage() {
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [multiError, setMultiError] = useState("");
   const [selectedLength, setSelectedLength] = useState(5);
+  const [entryTab, setEntryTab] = useState<"game" | "settings">("game");
+  const [mobileLayout, setMobileLayout] = useState<"split" | "tabs">("split");
+  const [boardTab, setBoardTab] = useState<"you" | "opp">("you");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mp.mobileLayout");
+      if (saved === "split" || saved === "tabs") setMobileLayout(saved);
+    } catch {}
+    const mql = window.matchMedia("(max-width: 760px)");
+    const apply = () => setIsMobile(mql.matches);
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
+
+  const updateMobileLayout = (next: "split" | "tabs") => {
+    setMobileLayout(next);
+    try { localStorage.setItem("mp.mobileLayout", next); } catch {}
+  };
 
   type ChatEntry = { id: number; kind: "system" | "user"; text: string; from?: string };
   const [chatLog, setChatLog] = useState<ChatEntry[]>([]);
@@ -130,7 +153,7 @@ export default function MultiplayerPage() {
         { word, result, multiplayer: true, timestamp: new Date() }
       );
     } catch (e) {
-      console.error("Failed to save result:", e);
+      Sentry.captureException(e);
     }
   };
 
@@ -273,15 +296,36 @@ export default function MultiplayerPage() {
 
   return (
     <div className="page-wrapper">
-      <header className="game-header">
-        <h1 className="title">Multiplayer</h1>
-      </header>
+      <AppHeader title="Multiplayer" backHref="/" greetingName={myUsername} />
 
       <div className="game-content">
         {wsError && <p className="error-message">{wsError}</p>}
 
         {!roomId ? (
           <div className="multiplayer-lobby">
+            <div className="mp-tabs" role="tablist" aria-label="Multiplayer sections">
+              <button
+                role="tab"
+                aria-selected={entryTab === "game"}
+                className={`mp-tab ${entryTab === "game" ? "mp-tab--active" : ""}`}
+                onClick={() => setEntryTab("game")}
+              >
+                Game
+              </button>
+              <button
+                role="tab"
+                aria-selected={entryTab === "settings"}
+                className={`mp-tab ${entryTab === "settings" ? "mp-tab--active" : ""}`}
+                onClick={() => setEntryTab("settings")}
+              >
+                Settings
+              </button>
+            </div>
+
+            {entryTab === "settings" ? (
+              <MobileLayoutPicker value={mobileLayout} onChange={updateMobileLayout} />
+            ) : (
+            <>
             <div className="setup-panel">
               <p className="setup-label">Pick a word length</p>
               <div className="setup-length-number">{selectedLength}</div>
@@ -352,6 +396,8 @@ export default function MultiplayerPage() {
                 Join a Room
               </button>
             )}
+            </>
+            )}
           </div>
         ) : (
           <>
@@ -359,10 +405,40 @@ export default function MultiplayerPage() {
 
             {multiError && <p className="error-message">{multiError}</p>}
 
-            <div className="multiplayer-boards">
-              {renderBoard(guesses, `${myUsername}'s Board`, true, true)}
-              {renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
-            </div>
+            {isMobile && mobileLayout === "tabs" ? (
+              <>
+                <div className="mp-pill-tabs" role="tablist" aria-label="Boards">
+                  <button
+                    role="tab"
+                    aria-selected={boardTab === "you"}
+                    className={`mp-pill mp-pill--you ${boardTab === "you" ? "mp-pill--on" : ""}`}
+                    onClick={() => setBoardTab("you")}
+                  >
+                    You · {Math.min(guesses.filter(g => g !== "").length + (youDone ? 0 : 1), MAX_TRIES)}/{MAX_TRIES}
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={boardTab === "opp"}
+                    className={`mp-pill mp-pill--opp ${boardTab === "opp" ? "mp-pill--on" : ""}`}
+                    onClick={() => setBoardTab("opp")}
+                  >
+                    {opponentUsername} · {opponentGuesses.filter(g => g !== "").length}/{MAX_TRIES}
+                  </button>
+                </div>
+                <div className="multiplayer-boards multiplayer-boards--single">
+                  {boardTab === "you"
+                    ? renderBoard(guesses, `${myUsername}'s Board`, true, true)
+                    : renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
+                </div>
+              </>
+            ) : (
+              <div
+                className={`multiplayer-boards ${isMobile && mobileLayout === "split" ? "multiplayer-boards--split-mobile" : ""}`}
+              >
+                {renderBoard(guesses, `${myUsername}'s Board`, true, true)}
+                {renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
+              </div>
+            )}
 
             <input
               className="hidden-input"
@@ -425,10 +501,141 @@ export default function MultiplayerPage() {
           </>
         )}
 
-        <button className="restart-button" onClick={() => router.push("/")}>
-          Back to Main Game
-        </button>
       </div>
     </div>
+  );
+}
+
+function MobileLayoutPicker({
+  value,
+  onChange,
+}: {
+  value: "split" | "tabs";
+  onChange: (next: "split" | "tabs") => void;
+}) {
+  const options: Array<{ id: "split" | "tabs"; label: string; sub: string }> = [
+    { id: "split", label: "A · Split", sub: "Both boards" },
+    { id: "tabs", label: "B · Tabs", sub: "Big board" },
+  ];
+
+  const onKey = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      onChange(options[(idx + 1) % options.length].id);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      onChange(options[(idx - 1 + options.length) % options.length].id);
+    }
+  };
+
+  return (
+    <div className="mp-settings-panel">
+      <div className="mp-settings-title">Mobile layout</div>
+      <div className="mp-layout-row" role="radiogroup" aria-label="Mobile layout">
+        {options.map((opt, idx) => {
+          const selected = value === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              className={`mp-layout-card ${selected ? "mp-layout-card--sel" : ""}`}
+              onClick={() => onChange(opt.id)}
+              onKeyDown={(e) => onKey(e, idx)}
+            >
+              {selected && <span className="mp-layout-check" aria-hidden="true">✓</span>}
+              <span className="mp-layout-preview" aria-hidden="true">
+                {opt.id === "split" ? <SplitPreview /> : <TabsPreview />}
+              </span>
+              <span className="mp-layout-label">{opt.label}</span>
+              <span className="mp-layout-sub">{opt.sub}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mp-settings-foot">Saves immediately</div>
+    </div>
+  );
+}
+
+function MiniBoard({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const cols = 5;
+  const rows = 3;
+  const pad = 2;
+  const gap = 2;
+  const cellW = (w - pad * 2 - gap * (cols - 1)) / cols;
+  const cellH = (h - pad * 2 - gap * (rows - 1)) / rows;
+  const cells = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      cells.push(
+        <rect
+          key={`${r}-${c}`}
+          x={x + pad + c * (cellW + gap)}
+          y={y + pad + r * (cellH + gap)}
+          width={cellW}
+          height={cellH}
+          fill="currentColor"
+          opacity="0.5"
+          rx="1"
+        />
+      );
+    }
+  }
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth="1.5" rx="3" />
+      {cells}
+    </g>
+  );
+}
+
+function MiniKeyboard({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const keys = 7;
+  const pad = 1.5;
+  const gap = 1.5;
+  const keyW = (w - pad * 2 - gap * (keys - 1)) / keys;
+  const keyH = h - pad * 2;
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+      {Array.from({ length: keys }).map((_, i) => (
+        <rect
+          key={i}
+          x={x + pad + i * (keyW + gap)}
+          y={y + pad}
+          width={keyW}
+          height={keyH}
+          fill="currentColor"
+          opacity="0.5"
+          rx="0.5"
+        />
+      ))}
+    </g>
+  );
+}
+
+function SplitPreview() {
+  return (
+    <svg className="pv-svg" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <MiniBoard x={2} y={2} w={96} h={70} />
+      <MiniBoard x={102} y={2} w={96} h={70} />
+      <MiniKeyboard x={2} y={78} w={196} h={20} />
+      <rect x={2} y={102} width={196} height={14} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+    </svg>
+  );
+}
+
+function TabsPreview() {
+  return (
+    <svg className="pv-svg" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <rect x={2} y={2} width={96} height={12} fill="currentColor" rx="2" />
+      <rect x={102} y={2} width={96} height={12} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+      <MiniBoard x={2} y={20} w={196} h={52} />
+      <MiniKeyboard x={2} y={78} w={196} h={20} />
+      <rect x={2} y={102} width={196} height={14} fill="none" stroke="currentColor" strokeWidth="1.5" rx="2" />
+    </svg>
   );
 }

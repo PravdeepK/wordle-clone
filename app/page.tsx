@@ -23,7 +23,7 @@ export function generateMetadata() {
   return {
     title: "Wordle By Prav",
     description:
-      "Guess the hidden word in six tries. Flexible word lengths, custom challenges, and real-time multiplayer.",
+      "A Wordle clone I built. Pick a word length, guess in six tries, share challenges with friends.",
   };
 }
 

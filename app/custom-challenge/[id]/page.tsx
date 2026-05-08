@@ -11,6 +11,8 @@ import { useDarkMode } from "../../../hooks/useDarkMode";
 import { useGlobalGuessKeyboard } from "../../../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../../../hooks/useFlipAnimation";
 import VirtualKeyboard from "../../../components/VirtualKeyboard";
+import AppHeader from "../../../components/AppHeader";
+import * as Sentry from "@sentry/nextjs";
 
 const db = getFirestore();
 const MAX_TRIES = 6;
@@ -18,7 +20,7 @@ const MAX_TRIES = 6;
 export default function CustomChallengePage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { darkMode, toggleDarkMode } = useDarkMode();
+  useDarkMode();
 
   const [uid, setUid] = useState<string | null>(null);
   const [secretWord, setSecretWord] = useState("");
@@ -67,7 +69,7 @@ export default function CustomChallengePage() {
       );
       await deleteDoc(doc(db, "customChallenges", id));
     } catch (e) {
-      console.error("Failed to save result:", e);
+      Sentry.captureException(e);
     }
   };
 
@@ -145,14 +147,11 @@ export default function CustomChallengePage() {
   if (challengeExpired) {
     return (
       <div className="page-wrapper">
-        <header className="game-header">
-          <h1 className="title">Challenge Expired</h1>
-        </header>
+        <AppHeader title="Challenge Expired" backHref="/" />
         <div className="game-content">
           <p style={{ color: "var(--color-text-muted)" }}>
             This challenge link has already been used or does not exist.
           </p>
-          <button className="restart-button" onClick={() => router.push("/")}>Back to Game</button>
         </div>
       </div>
     );
@@ -165,19 +164,8 @@ export default function CustomChallengePage() {
 
   return (
     <div className="page-wrapper">
+      <AppHeader title="Custom Challenge" backHref="/" />
 
-      {/* Sticky Header */}
-      <header className="game-header">
-        <h1 className="title">Custom Challenge</h1>
-        <div className="game-header-actions">
-          <label className="dark-mode-switch" aria-label="Toggle dark mode">
-            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
-            <span className="slider" />
-          </label>
-        </div>
-      </header>
-
-      {/* Main Content */}
       <div className="game-content">
         <div className="grid" style={{ '--tile-size': `${tileSize}px` } as React.CSSProperties}>
           {guesses.map((guess, rowIndex) => {

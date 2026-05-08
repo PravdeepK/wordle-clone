@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Email Mockup — Gmail & Outlook</title>
+<style>
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#e8eaed; }
+  .wrap { display:grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; max-width: 1600px; margin: 0 auto; }
+  .client { background:#fff; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow:hidden; }
+  .client-header { padding: 12px 20px; font-weight: 600; font-size: 14px; border-bottom: 1px solid #e0e0e0; display:flex; align-items:center; gap:8px; }
+  .gmail .client-header { background:#fff; color:#202124; }
+  .gmail .logo { width:20px; height:20px; background: linear-gradient(135deg,#4285f4,#ea4335,#fbbc04,#34a853); border-radius:2px; }
+  .outlook .client-header { background:#0078d4; color:#fff; }
+  .outlook .logo { width:20px; height:20px; background:#fff; color:#0078d4; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; border-radius:2px; }
+  .email-area { padding: 20px; }
+  .gmail .email-area { background: #fff; }
+  .outlook .email-area { background: #faf9f8; }
+  .meta { font-size:13px; color:#5f6368; margin-bottom: 16px; padding-bottom:12px; border-bottom:1px solid #f0f0f0; }
+  .meta strong { color:#202124; }
+  .outlook .meta { color:#605e5c; }
+  .outlook .meta strong { color:#323130; }
+  h2.label { margin: 16px 24px 0; font-size: 13px; color:#5f6368; text-transform:uppercase; letter-spacing:1px; }
+</style>
+</head>
+<body>
+
+<h1 style="text-align:center;padding:24px 0 0;color:#202124;font-size:20px;">Email Verification Mockup</h1>
+
+<div class="wrap">
+
+  <!-- GMAIL -->
+  <div class="client gmail">
+    <div class="client-header">
+      <div class="logo"></div>
+      <span>Gmail (Light Mode)</span>
+    </div>
+    <div class="email-area">
+      <div class="meta">
+        <strong>Verify your Wordle account</strong><br>
+        <span style="color:#5f6368;">noreply@fakewordle.com &nbsp;to me</span>
+      </div>
+
+      <!-- EMAIL HTML -->
+      <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e6e6e6;">
+        <div style="background:#6aaa64;padding:32px 24px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 12px;border-collapse:separate;border-spacing:3px;">
+            <tr>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">W</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#c9b458;border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">O</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">R</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">D</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#c9b458;border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">L</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid rgba(255,255,255,0.4);border-radius:4px;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">E</td>
+            </tr>
+          </table>
+          <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:2px;text-transform:uppercase;">by Prav</div>
+        </div>
+        <div style="padding:36px 32px;">
+          <h1 style="font-size:22px;font-weight:700;color:#1a1a1b;margin:0 0 12px;">Welcome aboard!</h1>
+          <p style="font-size:15px;color:#4a4a4a;line-height:1.6;margin:0 0 8px;">Thank you for signing up on my version of Wordle!</p>
+          <p style="font-size:15px;color:#4a4a4a;line-height:1.6;margin:0 0 28px;">Click the button below to verify your email address and activate your account. Once verified, you'll be able to log in and start guessing.</p>
+          <div style="text-align:center;margin-bottom:28px;">
+            <a href="#" style="display:inline-block;padding:14px 36px;background:#6aaa64;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;letter-spacing:0.5px;">Verify My Email</a>
+          </div>
+          <p style="font-size:13px;color:#787c7e;line-height:1.5;margin:0;">If the button doesn't work, copy and paste this link into your browser:<br/><a href="#" style="color:#6aaa64;word-break:break-all;">https://wordle-clone-20672.firebaseapp.com/__/auth/action?mode=verifyEmail&oobCode=...</a></p>
+        </div>
+        <div style="background:#f9f9f9;border-top:1px solid #e6e6e6;padding:20px 32px;text-align:center;">
+          <p style="font-size:12px;color:#787c7e;margin:0;">If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+      </div>
+      <!-- /EMAIL HTML -->
+    </div>
+  </div>
+
+  <!-- OUTLOOK -->
+  <div class="client outlook">
+    <div class="client-header">
+      <div class="logo">O</div>
+      <span>Outlook (Desktop / Windows)</span>
+    </div>
+    <div class="email-area">
+      <div class="meta">
+        <strong>Verify your Wordle account</strong><br>
+        <span>noreply@fakewordle.com</span>
+      </div>
+
+      <!-- Same email; Outlook desktop ignores border-radius and rgba borders -->
+      <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e6e6e6;">
+        <div style="background:#6aaa64;padding:32px 24px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 12px;border-collapse:separate;border-spacing:3px;">
+            <tr>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid #ffffff;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">W</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#c9b458;border:2px solid #ffffff;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">O</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid #ffffff;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">R</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid #ffffff;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">D</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#c9b458;border:2px solid #ffffff;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">L</td>
+              <td width="40" height="40" style="width:40px;height:40px;background:#6aaa64;border:2px solid #ffffff;font-size:18px;font-weight:700;color:#ffffff;text-align:center;vertical-align:middle;line-height:40px;">E</td>
+            </tr>
+          </table>
+          <div style="font-size:13px;font-weight:600;color:#ffffff;letter-spacing:2px;text-transform:uppercase;">by Prav</div>
+        </div>
+        <div style="padding:36px 32px;">
+          <h1 style="font-size:22px;font-weight:700;color:#1a1a1b;margin:0 0 12px;font-family:'Segoe UI',Arial,sans-serif;">Welcome aboard!</h1>
+          <p style="font-size:15px;color:#4a4a4a;line-height:1.6;margin:0 0 8px;">Thank you for signing up on my version of Wordle!</p>
+          <p style="font-size:15px;color:#4a4a4a;line-height:1.6;margin:0 0 28px;">Click the button below to verify your email address and activate your account. Once verified, you'll be able to log in and start guessing.</p>
+          <div style="text-align:center;margin-bottom:28px;">
+            <a href="#" style="display:inline-block;padding:14px 36px;background:#6aaa64;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;letter-spacing:0.5px;">Verify My Email</a>
+          </div>
+          <p style="font-size:13px;color:#787c7e;line-height:1.5;margin:0;">If the button doesn't work, copy and paste this link into your browser:<br/><a href="#" style="color:#6aaa64;word-break:break-all;">https://wordle-clone-20672.firebaseapp.com/__/auth/action?mode=verifyEmail&oobCode=...</a></p>
+        </div>
+        <div style="background:#f9f9f9;border-top:1px solid #e6e6e6;padding:20px 32px;text-align:center;">
+          <p style="font-size:12px;color:#787c7e;margin:0;">If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width:1200px;margin:0 auto 32px;padding:0 24px;font-size:13px;color:#5f6368;line-height:1.6;">
+  <h3 style="color:#202124;margin-top:24px;">Rendering notes</h3>
+  <ul>
+    <li><strong>Gmail (left):</strong> Renders the full design — rounded corners on card &amp; button, semi-transparent white tile borders, table-cell-centered letters.</li>
+    <li><strong>Outlook desktop (right):</strong> Strips <code>border-radius</code> (square card &amp; square button) and doesn't honor <code>rgba()</code> borders, so tile borders render as solid white. Letters still centered correctly via the table approach. Outlook.com web is closer to Gmail.</li>
+    <li>Both clients use the table-based tile layout, so letters are vertically &amp; horizontally centered in every tile.</li>
+  </ul>
+</div>
+
+</body>
+</html>

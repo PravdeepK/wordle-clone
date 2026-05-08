@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
+import * as Sentry from "@sentry/nextjs";
 import { checkGuess } from "../lib/wordle";
 import { validateWord } from "../lib/validateWord";
-import { useDarkMode } from "../hooks/useDarkMode";
 import { useGlobalGuessKeyboard } from "../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../hooks/useFlipAnimation";
 import VirtualKeyboard from "../components/VirtualKeyboard";
+import AppHeader, { Icon } from "../components/AppHeader";
 
 const db = getFirestore();
 const MAX_TRIES = 6;
@@ -22,7 +23,6 @@ const fallbacks: Record<number, string> = {
 
 export default function WordleHomePage() {
   const router = useRouter();
-  const { darkMode, toggleDarkMode } = useDarkMode();
 
   const [username, setUsername] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
@@ -37,6 +37,7 @@ export default function WordleHomePage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const {
     tileReveal,
@@ -60,13 +61,14 @@ export default function WordleHomePage() {
       } else {
         setUsername(user.displayName || "Player");
         setUid(user.uid);
+        setUserEmail(user.email || null);
       }
     });
     return () => unsub();
   }, [router]);
 
   const resetBoardState = () => {
-    resetAnimation(); // cancels pending timeouts + clears tileReveal/animatingRow/shakeRow/winRow
+    resetAnimation();
     setGuesses(Array(MAX_TRIES).fill(""));
     setKeyStatuses({});
     setGameOver(false);
@@ -83,11 +85,10 @@ export default function WordleHomePage() {
         { word: secretWord, result, timestamp: new Date() }
       );
     } catch (err) {
-      console.error("Failed to save game result:", err);
+      Sentry.captureException(err);
     }
   };
 
-  /** Fetches a word for `wordLength` (defaults to current `difficulty`). Returns whether a word is ready to play. */
   const fetchWord = async (wordLength?: number): Promise<boolean> => {
     const len = wordLength ?? difficulty;
     setLoading(true);
@@ -130,7 +131,7 @@ export default function WordleHomePage() {
     if (ok) setPhase("playing");
   };
 
-  const handleChangeLength = () => {
+  const handleBackToSetup = () => {
     const midGame = phase === "playing" && secretWord && !gameOver && guesses.some((g) => g !== "");
     if (midGame && !window.confirm("Abandon this game and pick a new word length?")) return;
     setPhase("setup");
@@ -169,7 +170,6 @@ export default function WordleHomePage() {
       guess: submittedGuess,
       wordLength: difficulty,
       onFlipDone: (flipColors, flipGuess) => {
-        // Update keyboard colours
         setKeyStatuses((prev) => {
           const next = { ...prev };
           flipGuess.split("").forEach((letter, i) => {
@@ -182,7 +182,6 @@ export default function WordleHomePage() {
           });
           return next;
         });
-        // Win / lose
         if (flipGuess === secretWord) {
           void saveGameResult("win");
           setWon(true);
@@ -217,69 +216,60 @@ export default function WordleHomePage() {
 
   return (
     <div className="page-wrapper">
+      <AppHeader
+        title="Wordle"
+        onBack={phase === "playing" ? handleBackToSetup : undefined}
+        onNewGame={phase === "playing" ? () => void fetchWord() : undefined}
+        newGameDisabled={loading}
+        feedbackIdentifier={userEmail || username || ""}
+        greetingName={username}
+      />
 
-      {/* Sticky Header */}
-      <header className="game-header">
-        <h1 className="title">Wordle</h1>
-        <div className="game-header-actions">
-          <label className="dark-mode-switch" aria-label="Toggle dark mode">
-            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
-            <span className="slider" />
-          </label>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="game-content">
-        <p className="welcome-text">Welcome, {username}</p>
-
-        {phase === "setup" ? (
-          /* ── Setup screen ── */
-          <div className="setup-panel">
-            <p className="setup-label">Pick a word length</p>
-            <div className="setup-length-number">{pendingDifficulty}</div>
-            <div
-              className="setup-length-tiles"
-              style={{ "--setup-tile-size": `${Math.min(46, Math.max(30, Math.floor(420 / pendingDifficulty)))}px` } as React.CSSProperties}
-              aria-hidden="true"
-            >
-              {Array.from({ length: pendingDifficulty }).map((_, index) => (
-                <div key={index} className="setup-length-tile" />
-              ))}
+      <div className="game-content game-content--wordle-home">
+        <div className="game-stage">
+          {phase === "setup" ? (
+            <div className="setup-panel setup-panel--card">
+              <p className="welcome-text">Welcome, {username}</p>
+              <p className="setup-label">Pick a word length</p>
+              <div className="setup-length-number">{pendingDifficulty}</div>
+              <div
+                className="setup-length-tiles"
+                style={{ "--setup-tile-size": `${Math.min(46, Math.max(30, Math.floor(420 / pendingDifficulty)))}px` } as React.CSSProperties}
+                aria-hidden="true"
+              >
+                {Array.from({ length: pendingDifficulty }).map((_, index) => (
+                  <div key={index} className="setup-length-tile" />
+                ))}
+              </div>
+              <div className="setup-range-row">
+                <span>3</span>
+                <input
+                  type="range"
+                  min={3}
+                  max={10}
+                  value={pendingDifficulty}
+                  onChange={(e) => setPendingDifficulty(parseInt(e.target.value, 10))}
+                  aria-label="Word length"
+                  style={{
+                    background: `linear-gradient(to right, var(--color-text) 0%, var(--color-text) ${((pendingDifficulty - 3) / 7) * 100}%, var(--color-tile-empty) ${((pendingDifficulty - 3) / 7) * 100}%, var(--color-tile-empty) 100%)`,
+                  }}
+                />
+                <span>10</span>
+              </div>
+              <button
+                type="button"
+                className="restart-button setup-start-btn"
+                disabled={loading || !uid}
+                onClick={() => void handleStartGame()}
+              >
+                {loading ? "Loading…" : "Start Game"}
+              </button>
+              {errorMessage && <p className="error-message">{errorMessage}</p>}
             </div>
-            <div className="setup-range-row">
-              <span>3</span>
-              <input
-                type="range"
-                min={3}
-                max={10}
-                value={pendingDifficulty}
-                onChange={(e) => setPendingDifficulty(parseInt(e.target.value, 10))}
-                aria-label="Word length"
-                style={{
-                  background: `linear-gradient(to right, var(--color-text) 0%, var(--color-text) ${((pendingDifficulty - 3) / 7) * 100}%, var(--color-tile-empty) ${((pendingDifficulty - 3) / 7) * 100}%, var(--color-tile-empty) 100%)`,
-                }}
-              />
-              <span>10</span>
-            </div>
-            <button
-              type="button"
-              className="restart-button setup-start-btn"
-              disabled={loading || !uid}
-              onClick={() => void handleStartGame()}
-            >
-              {loading ? "Loading…" : "Start Game"}
-            </button>
-            {errorMessage && <p className="error-message">{errorMessage}</p>}
-          </div>
-        ) : (
-          /* ── Playing screen ── */
-          <>
+          ) : (
+            <>
             <div className="playing-meta">
               <span>{difficulty} letters</span>
-              <button type="button" className="change-length-link" onClick={handleChangeLength}>
-                Change
-              </button>
             </div>
 
             <div className="grid" style={{ '--tile-size': `${tileSize}px` } as React.CSSProperties}>
@@ -299,26 +289,19 @@ export default function WordleHomePage() {
                       const letter = displayGuess[colIndex] || "";
                       const hasFilled = isCurrentRow && !!letter;
 
-                      // Colour logic:
-                      // – typing row: no colour
-                      // – animating row: only show colour once tile has flipped through invisible (tileReveal)
-                      // – past row: colour from tileReveal (set during its flip), fallback to checkGuess
                       const colorClass = isCurrentRow
                         ? ""
                         : isAnimating
                         ? (revealedColors[colIndex] ?? "")
                         : (tileReveal[rowIndex]?.[colIndex] ?? (guess ? checkGuess(guess, secretWord)[colIndex] : ""));
 
-                      // Flip animation for the animating row
                       let flipClass = "";
                       let flipStyle: React.CSSProperties = {};
                       if (isAnimating && guess) {
                         if (!revealedColors[colIndex]) {
-                          // Phase 1: fold away — stagger each tile
                           flipClass = "cell--flip-in";
                           flipStyle = { animationDelay: `${colIndex * 300}ms` };
                         } else {
-                          // Phase 2: unfold showing colour
                           flipClass = "cell--flip-out";
                         }
                       }
@@ -354,25 +337,23 @@ export default function WordleHomePage() {
             {errorMessage && <p className="error-message">{errorMessage}</p>}
 
             {gameOver && (
-              <p className={won ? "win-message" : "game-over"}>
-                {won ? "Brilliant!" : `The word was ${secretWord}`}
-              </p>
+              <div className="game-over-card">
+                <p className={won ? "win-message" : "game-over"}>
+                  {won ? "Brilliant!" : `The word was ${secretWord}`}
+                </p>
+                <button
+                  type="button"
+                  className="restart-button"
+                  disabled={loading}
+                  onClick={() => void fetchWord()}
+                >
+                  <Icon.Refresh />
+                  <span>New Game</span>
+                </button>
+              </div>
             )}
-          </>
-        )}
-
-        <div className="game-nav">
-          {phase === "playing" && (
-            <button className="restart-button" disabled={loading} onClick={() => void fetchWord()}>
-              New Game
-            </button>
+            </>
           )}
-          <button className="scoreboard-button" onClick={() => router.push("/custom-word")}>Custom Word</button>
-          <button className="scoreboard-button" onClick={() => router.push("/scoreboard")}>Scoreboard</button>
-          <button className="scoreboard-button" onClick={() => router.push("/multiplayer")}>Multiplayer</button>
-          <button className="logout-button" onClick={async () => { await signOut(auth); router.replace("/login"); }}>
-            Logout
-          </button>
         </div>
       </div>
     </div>

@@ -24,10 +24,21 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const url =
-      typeof window !== "undefined" && window.location.hostname === "localhost"
-        ? "ws://localhost:3005"
-        : process.env.NEXT_PUBLIC_WS_URL ?? "";
+    const url = (() => {
+      if (typeof window === "undefined") return "";
+      const { hostname } = window.location;
+      const envUrl = process.env.NEXT_PUBLIC_WS_URL ?? "";
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return "ws://localhost:3005";
+      }
+      // Dev access from a phone/another device on the LAN: env URL still points at
+      // localhost, but localhost on the client device isn't the dev machine. Rewrite
+      // to the host that's serving the page.
+      if (/^(ws|wss):\/\/(localhost|127\.0\.0\.1)/.test(envUrl)) {
+        return `ws://${hostname}:3005`;
+      }
+      return envUrl;
+    })();
 
     function connect() {
       if (cancelled) return;
@@ -35,7 +46,6 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
 
       ws.onopen = () => {
         if (cancelled) { ws?.close(); return; }
-        console.log("[WebSocket] Connected");
         retries = 0;
         setSocket(ws);
         setConnected(true);
@@ -54,13 +64,13 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
           if (type === "player-finished") opts.onPlayerFinished?.();
           if (type === "chat")            opts.onChat?.(payload?.text ?? "", payload?.from ?? "Opponent");
           if (type === "room-expired")    setWsError("Room has expired. Please refresh and try again.");
-        } catch (err) {
-          console.warn("[WebSocket] Invalid message:", err);
+        } catch {
+          // Malformed payload from server; ignore and keep the socket open.
         }
       };
 
       ws.onerror = () => {
-        console.warn("[WebSocket] Connection failed, will retry…");
+        // Connection failure is surfaced to the user via wsError on close.
       };
 
       ws.onclose = () => {
@@ -69,7 +79,6 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
         setSocket(null);
         if (retries < MAX_RETRIES) {
           retries++;
-          console.log(`[WebSocket] Reconnecting (attempt ${retries}/${MAX_RETRIES})`);
           setWsError(`Connecting to server… (attempt ${retries}/${MAX_RETRIES})`);
           reconnectTimer = setTimeout(connect, RETRY_DELAY_MS);
         } else {

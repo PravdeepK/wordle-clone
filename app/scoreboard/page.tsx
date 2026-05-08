@@ -14,6 +14,7 @@ import {
 import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import AppHeader from "../../components/AppHeader";
 
 const db = getFirestore();
 
@@ -155,9 +156,7 @@ export default function Scoreboard() {
 
   return (
     <div className="page-wrapper">
-      <header className="game-header">
-        <h1 className="title">Scoreboard</h1>
-      </header>
+      <AppHeader title="Scoreboard" backHref="/" />
 
       <div className="game-content">
         {/* Game Modes */}
@@ -259,14 +258,9 @@ export default function Scoreboard() {
           </ul>
         )}
 
-        <div className="flex gap-2">
-          <button className="restart-button" onClick={resetScoreboard}>
-            Reset Scoreboard
-          </button>
-          <button className="restart-button" onClick={() => router.push("/")}>
-            Back to Game
-          </button>
-        </div>
+        <button className="restart-button" onClick={resetScoreboard}>
+          Reset Scoreboard
+        </button>
       </div>
     </div>
   );
