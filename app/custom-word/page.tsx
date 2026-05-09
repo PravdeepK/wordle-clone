@@ -14,6 +14,7 @@ export default function CustomWordPage() {
   const [customWord, setCustomWord] = useState("");
   const [challengeLink, setChallengeLink] = useState("");
   const [error, setError] = useState("");
+  const [validating, setValidating] = useState(false);
   const router = useRouter();
   useDarkMode();
 
@@ -38,7 +39,20 @@ export default function CustomWordPage() {
       return;
     }
 
+    setValidating(true);
     try {
+      const res = await fetch("/api/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setError("That doesn't look like a real word. Try a dictionary word or common slang.");
+        setValidating(false);
+        return;
+      }
+
       const docRef = await addDoc(collection(db, "customChallenges"), {
         word,
         timestamp: new Date(),
@@ -46,6 +60,8 @@ export default function CustomWordPage() {
       setChallengeLink(`${window.location.origin}/custom-challenge/${docRef.id}`);
     } catch {
       setError("Something went wrong. Please try again.");
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -71,8 +87,8 @@ export default function CustomWordPage() {
 
             {error && <p className="error-message">{error}</p>}
 
-            <button onClick={createChallenge} className="restart-button setup-start-btn">
-              Create Challenge
+            <button onClick={createChallenge} disabled={validating} className="restart-button setup-start-btn">
+              {validating ? "Validating…" : "Create Challenge"}
             </button>
 
             {challengeLink && (

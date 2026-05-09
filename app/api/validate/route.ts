@@ -21,20 +21,28 @@ export async function POST(request: Request) {
 
   const clean = word.trim().toLowerCase().replace(/[^a-z]/g, "");
 
-  try {
+  const prompt = `Is "${clean}" a real English word that a typical speaker would recognize? Be very permissive: accept dictionary words (including all inflected forms — plurals like "cats", conjugations like "running"/"ran"/"swam", comparatives like "bigger", agent nouns like "librarian"/"runner"/"teacher", adverbs like "quickly", abstract nouns like "happiness"), common slang, internet terms, informal words, mild profanity, brand names in common usage, and well-known proper nouns. Only reject pure gibberish or random letter combinations like "qwxzt". Reply with only "yes" or "no".`;
+
+  async function ask(): Promise<string> {
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 5,
-      messages: [
-        {
-          role: "user",
-          content: `Is "${clean}" something a typical English speaker would recognize as a word? Be permissive: accept dictionary words, plurals, conjugations, common slang, internet slang, informal terms, mild profanity, brand names that have entered common usage, and proper nouns people would know. Only reject pure gibberish or random letter combinations. Reply with only "yes" or "no".`,
-        },
-      ],
+      temperature: 0,
+      messages: [{ role: "user", content: prompt }],
     });
+    return (message.content[0] as { text: string }).text.trim().toLowerCase();
+  }
 
-    const reply = (message.content[0] as { text: string }).text.trim().toLowerCase();
-    return NextResponse.json({ valid: reply.startsWith("yes") });
+  try {
+    let reply = await ask();
+    if (reply.startsWith("no")) {
+      const second = await ask();
+      if (second.startsWith("yes")) reply = second;
+    }
+    if (reply.startsWith("yes")) return NextResponse.json({ valid: true });
+    if (reply.startsWith("no")) return NextResponse.json({ valid: false });
+    // Ambiguous response — fail open.
+    return NextResponse.json({ valid: true });
   } catch {
     // Fail open so valid words aren't blocked on API errors
     return NextResponse.json({ valid: true });

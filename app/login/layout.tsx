@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/login" },
-  openGraph: { title, description, url: "/login" },
+  openGraph: { title, description, url: "/login", images: ["/opengraph-image"] },
   twitter: { title, description },
   robots: { index: false, follow: true },
 };
