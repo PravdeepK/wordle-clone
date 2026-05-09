@@ -47,10 +47,23 @@ export async function POST(req: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const fromAddress = process.env.RESEND_FROM_EMAIL ?? "noreply@yourdomain.com";
 
+    const text = [
+      "Welcome aboard!",
+      "",
+      "Thank you for signing up on my version of Wordle.",
+      "",
+      "Verify your email address by opening this link:",
+      verificationLink,
+      "",
+      "If you didn't create an account, you can safely ignore this email.",
+    ].join("\n");
+
     await resend.emails.send({
       from: fromAddress,
       to: email,
+      replyTo: fromAddress,
       subject: "Verify your Wordle account",
+      text,
       html: `
         <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e6e6e6;">
 

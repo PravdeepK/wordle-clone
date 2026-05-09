@@ -18,20 +18,24 @@ function TileRow({
   colors,
   revealed,
   startDelayMs,
+  reverse = false,
 }: {
   text: string;
   colors: ColorVar[];
   revealed: boolean;
   startDelayMs: number;
+  reverse?: boolean;
 }) {
+  const chars = text.split("");
   return (
     <div className="login-tiles">
-      {text.split("").map((char, i) => {
+      {chars.map((char, i) => {
+        const order = reverse ? chars.length - 1 - i : i;
         const style: CSSProperties = {
           ["--reveal-bg" as never]: `var(${colors[i]})`,
         };
         if (revealed) {
-          style.animationDelay = `${startDelayMs + i * FLIP_STAGGER_MS}ms`;
+          style.animationDelay = `${startDelayMs + order * FLIP_STAGGER_MS}ms`;
         }
         return (
           <div
@@ -64,12 +68,10 @@ export default function WordleLogoTiles() {
     return () => window.clearTimeout(t);
   }, []);
 
-  const row2Start = (("WORDLE".length - 1) * FLIP_STAGGER_MS) + FLIP_DURATION_MS + ROW_GAP_MS;
-
   return (
     <div className="login-tiles-stack" aria-hidden>
       <TileRow text="WORDLE" colors={colors.wordle} revealed={revealed} startDelayMs={0} />
-      <TileRow text="BYPRAV" colors={colors.byprav} revealed={revealed} startDelayMs={row2Start} />
+      <TileRow text="BYPRAV" colors={colors.byprav} revealed={revealed} startDelayMs={0} reverse />
     </div>
   );
 }
