@@ -237,8 +237,20 @@ wss.on("connection", (socket: WebSocket) => {
 
   socket.on("close", () => {
     for (const id in rooms) {
-      const { host, guest } = rooms[id];
+      const room = rooms[id];
+      const { host, guest } = room;
       if (host === socket || guest === socket) {
+        const leaverWasHost = host === socket;
+        const peer = leaverWasHost ? guest : host;
+        const leaverName = leaverWasHost
+          ? room.hostUsername
+          : (room.guestUsername || "Opponent");
+        try {
+          peer?.send(JSON.stringify({
+            type: "peer-left",
+            payload: { username: leaverName },
+          }));
+        } catch { /* ignore */ }
         deleteRoom(id);
         break;
       }

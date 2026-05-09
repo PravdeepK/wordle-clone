@@ -134,6 +134,35 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
     }
   };
 
+  const handleForgotPassword = async () => {
+    setError("");
+    setSuccessMsg("");
+    if (!inputIdentifier.trim()) {
+      setError("Enter your username or email above, then click Forgot password.");
+      return;
+    }
+    try {
+      const email = await resolveEmail(inputIdentifier);
+      if (!email) {
+        setError("No account found with that username or email.");
+        return;
+      }
+      const res = await fetch("/api/send-password-reset-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Could not send reset email.");
+        return;
+      }
+      setSuccessMsg("Password reset email sent! Check your inbox (and spam folder).");
+    } catch {
+      setError("Could not send reset email. Please try again.");
+    }
+  };
+
   const handleResendVerification = async () => {
     setError("");
     setSuccessMsg("");
@@ -287,6 +316,12 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
         <button onClick={handleAuth} className="restart-button login-submit" disabled={loading}>
           {loading ? "Please wait..." : isLoginMode ? "Login" : "Create Account"}
         </button>
+
+        {isLoginMode && (
+          <button type="button" onClick={handleForgotPassword} className="login-switch-mode">
+            Forgot password?
+          </button>
+        )}
 
         {needsVerification && (
           <button onClick={handleResendVerification} className="scoreboard-button login-submit">
