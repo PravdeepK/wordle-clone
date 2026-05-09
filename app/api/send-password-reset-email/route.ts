@@ -17,7 +17,7 @@ function getAdminApp() {
 }
 
 export async function POST(req: NextRequest) {
-  const ipLimit = rateLimit(`verify:ip:${clientIp(req)}`, 5, 60_000);
+  const ipLimit = rateLimit(`reset:ip:${clientIp(req)}`, 5, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please wait and try again." },
@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email is required." }, { status: 400 });
   }
 
-  const emailLimit = rateLimit(`verify:email:${email.toLowerCase()}`, 3, 60_000);
+  const emailLimit = rateLimit(`reset:email:${email.toLowerCase()}`, 3, 60_000);
   if (!emailLimit.allowed) {
     return NextResponse.json(
-      { error: "Verification email already sent. Please check your inbox." },
+      { error: "Password reset email already sent. Please check your inbox." },
       { status: 429, headers: { "Retry-After": String(emailLimit.retryAfter) } }
     );
   }
@@ -42,27 +42,27 @@ export async function POST(req: NextRequest) {
   try {
     const app = getAdminApp();
     const adminAuth = getAuth(app);
-    const verificationLink = await adminAuth.generateEmailVerificationLink(email);
+    const resetLink = await adminAuth.generatePasswordResetLink(email);
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     const fromAddress = process.env.RESEND_FROM_EMAIL ?? "noreply@yourdomain.com";
 
     const text = [
-      "Welcome aboard!",
+      "Reset your password",
       "",
-      "Thank you for signing up on my version of Wordle.",
+      "We received a request to reset the password for your Wordle account.",
       "",
-      "Verify your email address by opening this link:",
-      verificationLink,
+      "Reset your password by opening this link:",
+      resetLink,
       "",
-      "If you didn't create an account, you can safely ignore this email.",
+      "If you didn't ask to reset your password, you can safely ignore this email.",
     ].join("\n");
 
     await resend.emails.send({
       from: fromAddress,
       to: email,
       replyTo: fromAddress,
-      subject: "Verify your Wordle account",
+      subject: "Reset your Wordle password",
       text,
       html: `
         <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e6e6e6;">
@@ -83,31 +83,31 @@ export async function POST(req: NextRequest) {
 
           <!-- Body -->
           <div style="padding:36px 32px;">
-            <h1 style="font-size:22px;font-weight:700;color:#1a1a1b;margin:0 0 12px;">Welcome aboard!</h1>
+            <h1 style="font-size:22px;font-weight:700;color:#1a1a1b;margin:0 0 12px;">Reset your password</h1>
             <p style="font-size:15px;color:#4a4a4a;line-height:1.6;margin:0 0 8px;">
-              Thank you for signing up on my version of Wordle!
+              We received a request to reset the password for your Wordle account.
             </p>
             <p style="font-size:15px;color:#4a4a4a;line-height:1.6;margin:0 0 28px;">
-              Click the button below to verify your email address and activate your account. Once verified, you'll be able to log in and start guessing.
+              Click the button below to choose a new password. The link will expire after a short time, so be sure to use it soon.
             </p>
 
             <div style="text-align:center;margin-bottom:28px;">
-              <a href="${verificationLink}"
+              <a href="${resetLink}"
                  style="display:inline-block;padding:14px 36px;background:#6aaa64;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;letter-spacing:0.5px;">
-                Verify My Email
+                Reset My Password
               </a>
             </div>
 
             <p style="font-size:13px;color:#787c7e;line-height:1.5;margin:0;">
               If the button doesn't work, copy and paste this link into your browser:<br/>
-              <a href="${verificationLink}" style="color:#6aaa64;word-break:break-all;">${verificationLink}</a>
+              <a href="${resetLink}" style="color:#6aaa64;word-break:break-all;">${resetLink}</a>
             </p>
           </div>
 
           <!-- Footer -->
           <div style="background:#f9f9f9;border-top:1px solid #e6e6e6;padding:20px 32px;text-align:center;">
             <p style="font-size:12px;color:#787c7e;margin:0;">
-              If you didn't create an account, you can safely ignore this email.
+              If you didn't ask to reset your password, you can safely ignore this email.
             </p>
           </div>
 
@@ -119,12 +119,15 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const e = err as { message?: string; code?: string };
     Sentry.captureException(err);
+    if (e?.code === "auth/user-not-found") {
+      return NextResponse.json({ success: true });
+    }
     if (e?.message?.includes("TOO_MANY_ATTEMPTS_TRY_LATER")) {
       return NextResponse.json(
-        { error: "Too many verification emails sent for this address. Please wait a few minutes and try again." },
+        { error: "Too many reset emails sent for this address. Please wait a few minutes and try again." },
         { status: 429 }
       );
     }
-    return NextResponse.json({ error: "Failed to send verification email." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send password reset email." }, { status: 500 });
   }
 }

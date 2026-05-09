@@ -34,6 +34,7 @@
   /* Sizing */
   --tile-size:     62px;
   --tile-gap:       5px;
+  --tile-border-width: 3px;
   --key-height:    58px;
   --header-height: 50px;
   /* App chrome header (.game-header--app): bar height + 1px bottom border — used to size main column */
@@ -49,7 +50,7 @@ html.dark {
   --color-text:       #ffffff;
   --color-text-muted: #818384;
 
-  --color-tile-empty:  #3a3a3c;
+  --color-tile-empty:  #4a4a4d;
   --color-tile-filled: #565758;
   --color-border:      #3a3a3c;
 
@@ -102,9 +103,17 @@ button {
 
 .app-header-wrap {
   justify-self: center;
-  width: min(560px, 100%);
+  width: 100%;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top);
+}
+
+/* Multiplayer uses a wider content lane; keep header aligned with it. */
+.app-header-wrap.app-header-wrap--wide {
+  width: min(1120px, 100%);
+}
+.app-header-wrap.app-header-wrap--wide .game-header {
+  max-width: none;
 }
 
 /* Coming soon landing (NEXT_PUBLIC_COMING_SOON=true on prod) — tiles: WordleLogoTiles + .login-page */
@@ -222,7 +231,7 @@ button {
   top: 0;
   z-index: 100;
   width: 100%;
-  max-width: 560px;
+  max-width: none;
   height: var(--header-height);
   display: flex;
   align-items: center;
@@ -417,6 +426,11 @@ button {
   height: 100%;
 }
 
+/* Multiplayer needs a wider lane so two boards fit without clipping. */
+.game-content.game-content--multiplayer {
+  width: min(1120px, 100%);
+}
+
 .game-stage {
   display: flex;
   flex-direction: column;
@@ -426,6 +440,12 @@ button {
   flex-shrink: 0;
   margin-top: auto;
   margin-bottom: auto;
+}
+
+/* Multiplayer should start near the top, not vertically centered. */
+.game-stage.game-stage--multiplayer {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -562,7 +582,7 @@ html.dark .setup-panel--card {
 .setup-length-tile {
   width: var(--setup-tile-size);
   height: var(--setup-tile-size);
-  border: 2px solid var(--color-tile-empty);
+  border: var(--tile-border-width) solid var(--color-tile-empty);
   background-color: var(--color-bg);
   border-radius: 2px;
 }
@@ -791,7 +811,7 @@ html.dark .game-over-card { box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35); }
   justify-content: center;
   font-size: 1.75rem;
   font-weight: 700;
-  border: 2px solid var(--color-tile-empty);
+  border: var(--tile-border-width) solid var(--color-tile-empty);
   text-transform: uppercase;
   user-select: none;
   color: var(--color-text);
@@ -970,7 +990,7 @@ html.dark .pretty-success {
   width: 44px;
   height: 44px;
   font-size: 1.4rem;
-  border: 2px solid var(--color-tile-filled);
+  border: var(--tile-border-width) solid var(--color-tile-filled);
   border-radius: 2px;
   background-color: transparent;
   color: var(--color-text);
@@ -1433,14 +1453,100 @@ html.dark .pretty-success {
 .room-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--color-text-muted);
   background-color: var(--color-tile-empty);
-  padding: 4px 12px;
+  padding: 4px 6px 4px 12px;
   border-radius: 20px;
+}
+
+.room-copy-btn {
+  font: inherit;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 14px;
+  border: none;
+  background: var(--color-text);
+  color: var(--color-bg);
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+.room-copy-btn:hover { opacity: 0.85; }
+.room-copy-btn:active { opacity: 0.7; }
+
+.mp-presence-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px auto 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--color-tile-empty);
+  color: var(--color-text);
+  border: 1px solid var(--color-border, transparent);
+  animation: mp-presence-slide 220ms ease-out;
+}
+.mp-presence-toast--join { border-color: #3fa84a; }
+.mp-presence-toast--leave { border-color: #e25555; }
+
+.mp-presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.mp-presence-toast--join .mp-presence-dot { background: #3fa84a; }
+.mp-presence-toast--leave .mp-presence-dot { background: #e25555; }
+
+@keyframes mp-presence-slide {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mp-waiting-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 24px auto;
+  padding: 20px 28px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-tile-empty);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  text-align: center;
+  max-width: 90%;
+}
+.mp-waiting-text {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+.mp-waiting-sub {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  color: var(--color-text);
+}
+.mp-waiting-dots { display: inline-flex; gap: 6px; }
+.mp-waiting-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: mp-waiting-bounce 1.2s infinite ease-in-out both;
+}
+.mp-waiting-dots span:nth-child(1) { animation-delay: -0.32s; }
+.mp-waiting-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes mp-waiting-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 
 .multiplayer-boards {
@@ -1456,7 +1562,7 @@ html.dark .pretty-success {
   --tile-size: 52px;
 }
 
-@media (min-width: 700px) {
+@media (min-width: 960px) {
   .multiplayer-boards {
     flex-direction: row;
     align-items: flex-start;
@@ -1765,6 +1871,10 @@ html.dark .pretty-success {
   .game-content {
     padding: 8px 10px max(24px, env(safe-area-inset-bottom));
     gap: 8px;
+  }
+
+  .game-content.game-content--multiplayer {
+    width: 100%;
   }
 
   .game-header--app { height: var(--game-header-app-bar); padding: 0 4px; }

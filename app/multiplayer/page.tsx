@@ -62,6 +62,36 @@ export default function MultiplayerPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [myColor, setMyColor] = useState<string>(DEFAULT_NAME_COLOR);
   const [opponentColor, setOpponentColor] = useState<string>(DEFAULT_NAME_COLOR);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const [presenceAlert, setPresenceAlert] = useState<{ kind: "join" | "leave"; name: string } | null>(null);
+  const presenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const copyRoomCode = async (code: string) => {
+    if (!code) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = code;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 1500);
+    } catch {}
+  };
+
+  const showPresenceAlert = (kind: "join" | "leave", name: string) => {
+    setPresenceAlert({ kind, name });
+    if (presenceTimerRef.current) clearTimeout(presenceTimerRef.current);
+    presenceTimerRef.current = setTimeout(() => setPresenceAlert(null), 4000);
+  };
 
   useEffect(() => {
     try {
@@ -115,6 +145,7 @@ export default function MultiplayerPage() {
   useEffect(() => () => {
     if (oppTypingTimerRef.current) clearTimeout(oppTypingTimerRef.current);
     if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    if (presenceTimerRef.current) clearTimeout(presenceTimerRef.current);
   }, []);
 
   const wordLength = word.length || selectedLength;
@@ -141,19 +172,25 @@ export default function MultiplayerPage() {
       if (oppColor && isValidNameColor(oppColor)) setOpponentColor(oppColor);
       if (oppName) {
         setOpponentUsername(oppName);
+        setWaitingForOpponent(false);
         pushSystem(`Joined room ${newRoomId}. Playing against ${oppName}.`);
       } else {
+        setWaitingForOpponent(true);
         pushSystem(`Room ${newRoomId} created. Waiting for an opponent…`);
       }
     },
     onGuestJoined: (oppName, oppColor) => {
       if (oppColor && isValidNameColor(oppColor)) setOpponentColor(oppColor);
-      if (oppName) {
-        setOpponentUsername(oppName);
-        pushSystem(`${oppName} joined the room.`);
-      } else {
-        pushSystem(`Opponent joined the room.`);
-      }
+      setWaitingForOpponent(false);
+      const name = oppName || "Opponent";
+      if (oppName) setOpponentUsername(oppName);
+      pushSystem(`${name} joined the room.`);
+      showPresenceAlert("join", name);
+    },
+    onPeerLeft: (name) => {
+      const display = name || opponentUsername || "Opponent";
+      pushSystem(`${display} left the room.`);
+      showPresenceAlert("leave", display);
     },
     onOpponentGuess: (guess) => {
       const g = guess.toUpperCase();
@@ -243,7 +280,7 @@ export default function MultiplayerPage() {
   };
 
   const handleKey = async (key: string) => {
-    if (gameOver || !word || youDone || youAnim.animatingRow !== null) return;
+    if (gameOver || !word || youDone || youAnim.animatingRow !== null || waitingForOpponent) return;
 
     if (key === "ENTER") {
       if (currentGuess.length !== wordLength) return;
@@ -305,7 +342,7 @@ export default function MultiplayerPage() {
   };
 
   useGlobalGuessKeyboard({
-    enabled: !!roomId && !!word && !gameOver && !youDone && youAnim.animatingRow === null,
+    enabled: !!roomId && !!word && !gameOver && !youDone && youAnim.animatingRow === null && !waitingForOpponent,
     maxLength: wordLength,
     setCurrentGuess,
     onEnter: () => void handleKey("ENTER"),
@@ -381,10 +418,10 @@ export default function MultiplayerPage() {
 
   return (
     <div className="page-wrapper">
-      <AppHeader title="Multiplayer" backHref="/" greetingName={myUsername} />
+      <AppHeader title="Multiplayer" backHref="/" greetingName={myUsername} className="app-header-wrap--wide" />
 
-      <div className="game-content game-content--centered">
-        <div className="game-stage">
+      <div className="game-content game-content--centered game-content--multiplayer">
+        <div className="game-stage game-stage--multiplayer">
         {wsError && <p className="error-message">{wsError}</p>}
 
         {!roomId ? (
@@ -490,11 +527,46 @@ export default function MultiplayerPage() {
           </div>
         ) : (
           <>
-            <div className="room-badge">Room: {roomId}</div>
+            <div className="room-badge">
+              <span>Room: {roomId}</span>
+              <button
+                type="button"
+                className="room-copy-btn"
+                onClick={() => copyRoomCode(roomId)}
+                aria-label="Copy room code"
+                title="Copy room code"
+              >
+                {copiedCode ? "Copied!" : "Copy"}
+              </button>
+            </div>
 
             {multiError && <p className="error-message">{multiError}</p>}
 
-            {isMobile && mobileLayout === "tabs" ? (
+            {presenceAlert && (
+              <div
+                className={`mp-presence-toast mp-presence-toast--${presenceAlert.kind}`}
+                role="status"
+                aria-live="polite"
+              >
+                <span className="mp-presence-dot" aria-hidden="true" />
+                <span>
+                  <strong>{presenceAlert.name}</strong>{" "}
+                  {presenceAlert.kind === "join" ? "joined the room" : "left the room"}
+                </span>
+              </div>
+            )}
+
+            {waitingForOpponent && (
+              <div className="mp-waiting-card" role="status" aria-live="polite">
+                <div className="mp-waiting-dots" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+                <div className="mp-waiting-text">Waiting for opponent…</div>
+                <div className="mp-waiting-sub">Share room code <strong>{roomId}</strong></div>
+              </div>
+            )}
+
+            {!waitingForOpponent && isMobile && mobileLayout === "tabs" ? (
               <>
                 <div className="mp-pill-tabs" role="tablist" aria-label="Boards">
                   <button
@@ -520,14 +592,14 @@ export default function MultiplayerPage() {
                     : renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
                 </div>
               </>
-            ) : (
+            ) : !waitingForOpponent ? (
               <div
                 className={`multiplayer-boards ${isMobile && mobileLayout === "split" ? "multiplayer-boards--split-mobile" : ""}`}
               >
                 {renderBoard(guesses, `${myUsername}'s Board`, true, true)}
                 {renderBoard(opponentGuesses, `${opponentUsername}'s Board`, youDone && themDone, false)}
               </div>
-            )}
+            ) : null}
 
             <input
               className="hidden-input"
@@ -539,7 +611,7 @@ export default function MultiplayerPage() {
               aria-label="Type your guess"
             />
 
-            <VirtualKeyboard onKey={handleKey} keyStatuses={keyStatuses} disabled={youDone} />
+            <VirtualKeyboard onKey={handleKey} keyStatuses={keyStatuses} disabled={youDone || waitingForOpponent} />
 
             {gameOver && (
               <p className={won ? "win-message" : "game-over"}>

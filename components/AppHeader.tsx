@@ -93,6 +93,8 @@ type AppHeaderProps = {
   feedbackIdentifier?: string;
   /** Optional: greeting in the menu header. */
   greetingName?: string;
+  /** Optional extra class for page-specific header layout overrides. */
+  className?: string;
 };
 
 type MenuItemProps = {
@@ -128,6 +130,7 @@ export default function AppHeader({
   newGameDisabled,
   feedbackIdentifier = "",
   greetingName,
+  className = "",
 }: AppHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -160,7 +163,7 @@ export default function AppHeader({
   const titleId = "app-header-title";
 
   return (
-    <div className="app-header-wrap">
+    <div className={`app-header-wrap ${className}`.trim()}>
       <header className="game-header game-header--app" aria-labelledby={titleId}>
         <div className="game-header-left">
           {handleBack && (

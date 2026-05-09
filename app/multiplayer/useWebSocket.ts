@@ -7,6 +7,7 @@ interface WebSocketOptions {
   onPlayerFinished?: () => void;
   onChat?: (text: string, from: string, color?: string) => void;
   onTyping?: (from: string, color: string, isTyping: boolean) => void;
+  onPeerLeft?: (username: string) => void;
 }
 
 const MAX_RETRIES = 5;
@@ -65,6 +66,7 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
           if (type === "player-finished") opts.onPlayerFinished?.();
           if (type === "chat")            opts.onChat?.(payload?.text ?? "", payload?.from ?? "Opponent", payload?.color);
           if (type === "typing")          opts.onTyping?.(payload?.from ?? "Opponent", payload?.color ?? "", !!payload?.isTyping);
+          if (type === "peer-left")       opts.onPeerLeft?.(payload?.username ?? "Opponent");
           if (type === "room-expired")    setWsError("Room has expired. Please refresh and try again.");
         } catch {
           // Malformed payload from server; ignore and keep the socket open.
