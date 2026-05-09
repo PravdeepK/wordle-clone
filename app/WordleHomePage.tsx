@@ -12,14 +12,29 @@ import { useGlobalGuessKeyboard } from "../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../hooks/useFlipAnimation";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import AppHeader, { Icon } from "../components/AppHeader";
+import { loadRecentWords, pushRecentWord } from "../lib/recentWords";
 
 const db = getFirestore();
 const MAX_TRIES = 6;
 
-const fallbacks: Record<number, string> = {
-  3: "CAT", 4: "LAMP", 5: "STONE", 6: "PLANET",
-  7: "BLANKET", 8: "SCHEDULE", 9: "IMPORTANT", 10: "STRAWBERRY",
+const fallbackPools: Record<number, string[]> = {
+  3: ["CAT", "DOG", "SUN", "CUP", "BAG", "PEN", "KEY", "MAP", "BOX", "FAN"],
+  4: ["LAMP", "FORK", "BOOK", "RING", "BOAT", "RAIN", "TREE", "SHOE", "DESK", "MOON"],
+  5: ["STONE", "BREAD", "RIVER", "CHAIR", "CLOUD", "HORSE", "PLANT", "MUSIC", "KNIFE", "CANDY", "TIGER", "OCEAN", "WATCH", "SWORD", "PIANO"],
+  6: ["PLANET", "RABBIT", "PENCIL", "GUITAR", "WINDOW", "GARDEN", "MONKEY", "CASTLE", "FOREST", "BRIDGE"],
+  7: ["BLANKET", "KITCHEN", "DIAMOND", "BALLOON", "RAINBOW", "BISCUIT", "LIBRARY", "COMPASS", "OCTOPUS", "TRUMPET"],
+  8: ["SCHEDULE", "ELEPHANT", "MOUNTAIN", "UMBRELLA", "COMPUTER", "DINOSAUR", "HOSPITAL", "SANDWICH", "PANCAKES", "AIRPLANE"],
+  9: ["IMPORTANT", "CHOCOLATE", "WONDERFUL", "TELEPHONE", "BUTTERFLY", "NEWSPAPER", "SPAGHETTI", "ASTRONAUT", "SUBMARINE", "LIGHTNING"],
+  10: ["STRAWBERRY", "HELICOPTER", "PLAYGROUND", "WATERMELON", "BASKETBALL", "SKATEBOARD", "TOOTHBRUSH", "BINOCULARS", "DICTIONARY", "CALCULATOR"],
 };
+
+function pickClientFallback(len: number, recent: string[]): string {
+  const pool = fallbackPools[len] ?? fallbackPools[5];
+  const recentSet = new Set(recent.map((w) => w.toUpperCase()));
+  const fresh = pool.filter((w) => !recentSet.has(w));
+  const choices = fresh.length > 0 ? fresh : pool;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
 
 export default function WordleHomePage() {
   const router = useRouter();
@@ -96,21 +111,26 @@ export default function WordleHomePage() {
     let success = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
+        const recent = loadRecentWords();
         const res = await fetch("/api/word", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ length: len }),
+          body: JSON.stringify({ length: len, recent }),
         });
         if (!res.ok) throw new Error("Bad response");
         const data = await res.json();
         if (data.word && data.word.length === len) {
-          setSecretWord(data.word.toUpperCase());
+          const upper = data.word.toUpperCase();
+          setSecretWord(upper);
+          pushRecentWord(upper);
           resetBoardState();
           success = true;
           break;
         }
         if (attempt === 3) {
-          setSecretWord((fallbacks[len] ?? "STONE").toUpperCase());
+          const fallback = pickClientFallback(len, recent);
+          setSecretWord(fallback);
+          pushRecentWord(fallback);
           resetBoardState();
           success = true;
           break;

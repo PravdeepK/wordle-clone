@@ -24,7 +24,29 @@ interface IncomingMessage {
     text?: string;
     color?: string;
     isTyping?: boolean;
+    recent?: unknown;
   };
+}
+
+const SERVER_RECENT_LIMIT = 40;
+const serverRecentWords: string[] = [];
+
+function pushServerRecent(word: string): void {
+  const lower = word.toLowerCase();
+  const idx = serverRecentWords.indexOf(lower);
+  if (idx !== -1) serverRecentWords.splice(idx, 1);
+  serverRecentWords.unshift(lower);
+  if (serverRecentWords.length > SERVER_RECENT_LIMIT) {
+    serverRecentWords.length = SERVER_RECENT_LIMIT;
+  }
+}
+
+function sanitizeRecent(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter((w): w is string => typeof w === "string")
+    .map((w) => w.toLowerCase())
+    .slice(0, 30);
 }
 
 const DEFAULT_NAME_COLOR = "#4a90e2";
@@ -79,13 +101,13 @@ function deleteRoom(roomId: string): void {
   delete rooms[roomId];
 }
 
-async function fetchWordFromAPI(length: number): Promise<string | null> {
+async function fetchWordFromAPI(length: number, recent: string[]): Promise<string | null> {
   const url = `${API_ORIGIN}/api/word`;
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ length }),
+      body: JSON.stringify({ length, recent }),
     });
     if (!res.ok) throw new Error(`status ${res.status}`);
     const data = await res.json() as { word: string };
@@ -116,11 +138,14 @@ wss.on("connection", (socket: WebSocket) => {
       const hostUsername = sanitizeUsername(payload?.username);
       const hostColor = sanitizeColor(payload?.color);
       const timeout = setTimeout(() => deleteRoom(roomId), 10 * 60_000);
-      const word = await fetchWordFromAPI(length);
+      const clientRecent = sanitizeRecent(payload?.recent);
+      const mergedRecent = Array.from(new Set([...clientRecent, ...serverRecentWords])).slice(0, 40);
+      const word = await fetchWordFromAPI(length, mergedRecent);
       if (!word) {
         socket.send(JSON.stringify({ type: "error", payload: "Could not generate word." }));
         return;
       }
+      pushServerRecent(word);
       rooms[roomId] = {
         host: socket,
         guest: null,

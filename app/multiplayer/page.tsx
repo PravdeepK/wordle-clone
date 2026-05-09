@@ -14,6 +14,7 @@ import useWebSocket from "./useWebSocket";
 import { useGlobalGuessKeyboard } from "../../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../../hooks/useFlipAnimation";
 import * as Sentry from "@sentry/nextjs";
+import { loadRecentWords, pushRecentWord } from "../../lib/recentWords";
 
 const MAX_TRIES = 6;
 
@@ -136,6 +137,7 @@ export default function MultiplayerPage() {
     onRoomJoined: (newRoomId, newWord, oppName, oppColor) => {
       setRoomId(newRoomId);
       setWord(newWord.toUpperCase());
+      pushRecentWord(newWord);
       if (oppColor && isValidNameColor(oppColor)) setOpponentColor(oppColor);
       if (oppName) {
         setOpponentUsername(oppName);
@@ -444,7 +446,7 @@ export default function MultiplayerPage() {
 
             <button
               className="scoreboard-button"
-              onClick={() => sendJsonMessage("create-room", { length: selectedLength, username: myUsername, color: myColor })}
+              onClick={() => sendJsonMessage("create-room", { length: selectedLength, username: myUsername, color: myColor, recent: loadRecentWords() })}
               disabled={!connected}
             >
               Start Multiplayer Game

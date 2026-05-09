@@ -33,10 +33,6 @@ export const metadata: Metadata = {
     telephone: false,
     address: false,
   },
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
-  },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
