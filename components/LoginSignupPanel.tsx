@@ -210,6 +210,17 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
     }
   };
 
+  const handleGuest = () => {
+    try {
+      sessionStorage.setItem("wordle:guest", "1");
+    } catch {}
+    if (onLoginSuccess) {
+      onLoginSuccess();
+    } else {
+      router.push("/");
+    }
+  };
+
   const switchMode = () => {
     setIsLoginMode(!isLoginMode);
     setError("");
@@ -331,6 +342,10 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
 
         <button type="button" onClick={switchMode} className="login-switch-mode">
           {isLoginMode ? "Need an account? Sign up" : "Already have an account? Log in"}
+        </button>
+
+        <button type="button" onClick={handleGuest} className="login-switch-mode">
+          Continue as guest
         </button>
       </div>
     </div>
