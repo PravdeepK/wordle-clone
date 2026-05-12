@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getFirestore, doc, getDoc, deleteDoc, collection, addDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { auth } from "../../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { checkGuess } from "../../../lib/wordle";
@@ -44,9 +44,12 @@ export default function CustomChallengePage() {
   } = useFlipAnimation();
 
   useEffect(() => {
+    const isGuest = (() => {
+      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
+    })();
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { router.push("/login"); return; }
-      setUid(user.uid);
+      if (!user && !isGuest) { router.push("/login"); return; }
+      setUid(user ? user.uid : null);
 
       const docSnap = await getDoc(doc(db, "customChallenges", id));
       if (docSnap.exists()) {
@@ -61,13 +64,17 @@ export default function CustomChallengePage() {
   }, [id]);
 
   const saveResult = async (result: string) => {
-    if (!uid || !secretWord) return;
+    if (!secretWord) return;
     try {
-      await addDoc(
-        collection(db, "users", uid, "games", "custom", "entries"),
-        { word: secretWord, result, timestamp: new Date() }
-      );
-      await deleteDoc(doc(db, "customChallenges", id));
+      if (uid) {
+        await addDoc(
+          collection(db, "users", uid, "games", "custom", "entries"),
+          { word: secretWord, result, timestamp: new Date() }
+        );
+      }
+      await fetch(`/api/custom-challenge?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
     } catch (e) {
       Sentry.captureException(e);
     }

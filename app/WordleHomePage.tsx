@@ -67,13 +67,23 @@ export default function WordleHomePage() {
 
   useEffect(() => {
     const isLocalDev = process.env.NODE_ENV === "development";
+    const isGuest = (() => {
+      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
+    })();
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        router.replace("/login");
+        if (isGuest) {
+          setUsername("Guest");
+          setUid(null);
+          setUserEmail(null);
+        } else {
+          router.replace("/login");
+        }
       } else if (!user.emailVerified && !isLocalDev) {
         await signOut(auth);
         router.replace("/login");
       } else {
+        try { sessionStorage.removeItem("wordle:guest"); } catch {}
         setUsername(user.displayName || "Player");
         setUid(user.uid);
         setUserEmail(user.email || null);

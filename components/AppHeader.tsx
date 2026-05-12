@@ -247,7 +247,12 @@ export default function AppHeader({
                 icon={<Icon.Logout />}
                 label="Logout"
                 danger
-                onClick={async () => { closeMenu(); await signOut(auth); router.replace("/login"); }}
+                onClick={async () => {
+                  closeMenu();
+                  try { sessionStorage.removeItem("wordle:guest"); } catch {}
+                  await signOut(auth);
+                  router.replace("/login");
+                }}
               />
             </div>
           )}

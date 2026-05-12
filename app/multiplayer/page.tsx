@@ -154,9 +154,18 @@ export default function MultiplayerPage() {
   const themAnim = useFlipAnimation();
 
   useEffect(() => {
+    const isGuest = (() => {
+      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
+    })();
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) router.replace("/login");
-      else {
+      if (!u) {
+        if (isGuest) {
+          setUid(null);
+          setMyUsername("Guest");
+        } else {
+          router.replace("/login");
+        }
+      } else {
         setUid(u.uid);
         setMyUsername(u.displayName || "Player");
       }

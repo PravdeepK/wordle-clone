@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { addDoc, collection, getFirestore } from "firebase/firestore";
 import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import AppHeader from "../../components/AppHeader";
-
-const db = getFirestore();
 
 export default function CustomWordPage() {
   const [customWord, setCustomWord] = useState("");
@@ -19,8 +16,11 @@ export default function CustomWordPage() {
   useDarkMode();
 
   useEffect(() => {
+    const isGuest = (() => {
+      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
+    })();
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) router.push("/login");
+      if (!user && !isGuest) router.push("/login");
     });
     return () => unsub();
   }, [router]);
@@ -53,11 +53,23 @@ export default function CustomWordPage() {
         return;
       }
 
-      const docRef = await addDoc(collection(db, "customChallenges"), {
-        word,
-        timestamp: new Date(),
+      const createRes = await fetch("/api/custom-challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word }),
       });
-      setChallengeLink(`${window.location.origin}/custom-challenge/${docRef.id}`);
+      if (!createRes.ok) {
+        const data = await createRes.json().catch(() => ({}));
+        setError(
+          createRes.status === 429
+            ? "You're creating challenges too fast. Please wait a moment."
+            : data.error || "Could not create challenge."
+        );
+        setValidating(false);
+        return;
+      }
+      const { id } = await createRes.json();
+      setChallengeLink(`${window.location.origin}/custom-challenge/${id}`);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
