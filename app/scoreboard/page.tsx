@@ -33,6 +33,7 @@ export default function Scoreboard() {
   useDarkMode();
 
   const [uid, setUid] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [games, setGames] = useState<GameEntry[]>([]);
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [resultFilter, setResultFilter] = useState("all");
@@ -129,8 +130,16 @@ export default function Scoreboard() {
   };
 
   useEffect(() => {
+    const isGuest = (() => {
+      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
+    })();
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) { router.push("/login"); return; }
+      if (!u) {
+        if (isGuest) { setUid(null); setIsGuest(true); return; }
+        router.push("/login");
+        return;
+      }
+      setIsGuest(false);
       setUid(u.uid);
       fetchAllGames(u.uid);
     });
@@ -261,7 +270,11 @@ export default function Scoreboard() {
 
         {/* List */}
         {filtered.length === 0 ? (
-          <p className="scoreboard-empty">No games found.</p>
+          <p className="scoreboard-empty">
+            {isGuest
+              ? "Guest games aren't saved. Create an account to track your stats."
+              : "No games found."}
+          </p>
         ) : (
           <ul className="scoreboard-list">
             {filtered.map((g) => (

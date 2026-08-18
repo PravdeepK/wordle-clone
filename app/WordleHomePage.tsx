@@ -289,7 +289,7 @@ export default function WordleHomePage() {
               <button
                 type="button"
                 className="restart-button setup-start-btn"
-                disabled={loading || !uid}
+                disabled={loading}
                 onClick={() => void handleStartGame()}
               >
                 {loading ? "Loading…" : "Start Game"}

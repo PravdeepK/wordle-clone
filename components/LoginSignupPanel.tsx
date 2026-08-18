@@ -9,7 +9,8 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { checkUsername } from "../lib/reservedUsernames";
 
 const db = getFirestore();
 
@@ -54,11 +55,18 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Username -> email happens server-side (firebase-admin) so the `users`
+  // collection is not publicly readable.
   const resolveEmail = async (identifier: string): Promise<string | null> => {
     if (identifier.includes("@")) return identifier;
-    const userDoc = await getDoc(doc(db, "users", identifier.toLowerCase()));
-    if (!userDoc.exists()) return null;
-    return userDoc.data().email as string;
+    const res = await fetch("/api/auth/resolve-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    return typeof data.email === "string" ? data.email : null;
   };
 
   const handleAuth = async () => {
@@ -93,10 +101,25 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
           return;
         }
 
-        const usernameKey = username.toLowerCase();
+        const usernameKey = username.trim().toLowerCase();
+        const nameCheck = checkUsername(usernameKey);
+        if (!nameCheck.ok) {
+          setError(nameCheck.reason);
+          return;
+        }
         const userDocRef = doc(db, "users", usernameKey);
-        if ((await getDoc(userDocRef)).exists()) {
-          setError("Username already taken. Please choose another.");
+        const availRes = await fetch("/api/auth/username-available", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: usernameKey }),
+        });
+        const availData = await availRes.json().catch(() => ({}));
+        if (!availRes.ok) {
+          setError(availData.error || "Could not check that username. Please try again.");
+          return;
+        }
+        if (!availData.available) {
+          setError(availData.reason || "Username already taken. Please choose another.");
           return;
         }
 
