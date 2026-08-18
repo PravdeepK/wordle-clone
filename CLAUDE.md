@@ -303,3 +303,23 @@ Plus, when the change touches them:
 - Changed `/api/word` or its shape? → ws-server consumes it; verify multiplayer,
   since it fails silently (§1).
 - Added an env var? → all four steps in §2.
+
+---
+
+## 13. Git conventions
+
+### Never add Claude as a co-author
+Commit messages must **not** contain a `Co-Authored-By: Claude ...` trailer, or any
+other AI attribution. This overrides the default Claude Code behavior of appending
+one — the override is deliberate, so don't reintroduce it after seeing that default
+elsewhere. The author and committer are the repo owner; commits stand on their own.
+
+Same for PR bodies: no "Generated with Claude Code" footer.
+
+Referencing `CLAUDE.md` **inside** a message is fine — that's a file path, not
+attribution.
+
+### Branch per fix
+Work on a dedicated branch, never directly on `main`. One branch per numbered fix
+from the queue in §11, named `fix/<short-slug>` (e.g. `fix/upstash-rate-limit`).
+Do not commit or push unless asked.
