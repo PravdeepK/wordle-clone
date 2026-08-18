@@ -24,7 +24,28 @@ export const RESERVED_USERNAMES: readonly string[] = [
   "me", "you", "everyone", "all",
 ];
 
+/**
+ * Terms that may not appear ANYWHERE in a username, not just as the whole
+ * name — these are the ones that let someone pose as the site or its staff
+ * (`WordleAdmin`, `Admin_Support`, `official-help`).
+ *
+ * Deliberately narrow: only terms with few innocent uses. Short words like
+ * `mod`, `all` and `me` stay exact-match only, since blocking them as
+ * substrings would reject ordinary names like `modern` or `wallace`.
+ */
+export const RESERVED_SUBSTRINGS: readonly string[] = [
+  "admin", "moderator", "superuser", "official",
+  "staff", "support", "security", "webmaster", "postmaster",
+];
+
+/**
+ * Exact names permitted despite the rules above. Owner test accounts:
+ * `pravadmin` for single player, `pravadmin1` for multiplayer.
+ */
+export const ALLOWLISTED_USERNAMES: readonly string[] = ["pravadmin", "pravadmin1"];
+
 const RESERVED = new Set(RESERVED_USERNAMES);
+const ALLOWLISTED = new Set(ALLOWLISTED_USERNAMES);
 
 /** Lowercase, 3-20 chars, letters/digits/underscore/hyphen, must start alphanumeric. */
 export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9_-]{2,19}$/;
@@ -43,7 +64,14 @@ export function checkUsername(raw: string): UsernameCheck {
       reason: "Usernames can use letters, numbers, underscores and hyphens, and must start with a letter or number.",
     };
   }
+  // Allowlisted owner accounts bypass the reserved checks (but not the format
+  // rules above).
+  if (ALLOWLISTED.has(name)) return { ok: true };
+
   if (RESERVED.has(name)) return { ok: false, reason: "That username isn't available." };
+  if (RESERVED_SUBSTRINGS.some((term) => name.includes(term))) {
+    return { ok: false, reason: "That username isn't available." };
+  }
 
   return { ok: true };
 }

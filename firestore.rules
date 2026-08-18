@@ -22,13 +22,30 @@ service cloud.firestore {
       ];
     }
 
+    // Exact names permitted despite the checks below: owner test accounts
+    // (single player + multiplayer). Keep in sync with lib/reservedUsernames.ts.
+    function allowlistedUsernames() {
+      return ['pravadmin', 'pravadmin1'];
+    }
+
+    // Terms that may not appear anywhere in a username, so nobody can pose as
+    // the site or its staff (WordleAdmin, Admin_Support, official-help).
+    // Deliberately narrow -- short words like 'mod' stay exact-match only, or
+    // ordinary names like 'modern' would be rejected.
+    function impersonationName(name) {
+      return name.matches('.*(admin|moderator|superuser|official|staff|support|security|webmaster|postmaster).*');
+    }
+
     // Lowercase, 3-20 chars, must start alphanumeric. The 20-char ceiling also
     // keeps usernames strictly shorter than a 28-char Firebase uid, so a
     // username can never collide with the uid-keyed game buckets that share
     // this collection.
     function validUsername(name) {
       return name.matches('^[a-z0-9][a-z0-9_-]{2,19}$')
-             && !(name in reservedUsernames());
+             && (
+               name in allowlistedUsernames()
+               || (!(name in reservedUsernames()) && !impersonationName(name))
+             );
     }
 
     // The `users` collection holds two different kinds of document:
