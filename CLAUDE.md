@@ -44,22 +44,28 @@ Railway/Fly reference is scoped to `NEXT_PUBLIC_WS_URL` only: Next app on Vercel
 ## 2. Environment variables
 
 `.env*` is gitignored — **never commit secrets, and never paste a real key into
-this file, the README, or a commit message.** There is currently **no `.env.example`**;
-if you add one, mirror the README table.
+this file, the README, or a commit message.** [.env.example](.env.example) documents
+every var with placeholders — start there.
 
 **Next app (Vercel):** `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_FIREBASE_*` (6 vars),
 `FIREBASE_ADMIN_PROJECT_ID` / `_CLIENT_EMAIL` / `_PRIVATE_KEY`, `RESEND_API_KEY`,
 `RESEND_FROM_EMAIL`, `FEEDBACK_TO_EMAIL` (optional), `NEXT_PUBLIC_SITE_URL`,
-`NEXT_PUBLIC_COMING_SOON`, `NEXT_PUBLIC_WS_URL`, `NEXT_PUBLIC_SENTRY_DSN`.
+`NEXT_PUBLIC_COMING_SOON`, `NEXT_PUBLIC_WS_URL`, `NEXT_PUBLIC_SENTRY_DSN`,
+`SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` (all optional, Sentry-only).
 
 **ws-server host:** `WORDLE_API_URL`, `PORT` (defaults 3005). Nothing else.
 
-When adding a new env var, do all four:
-1. Add it to the README env table with its consumer.
+**Any new env var must be added to [.env.example](.env.example) in the same change**
+(placeholder value + a comment naming its consumer and whether it's required), or the
+file silently goes stale and stops being trustworthy.
+
+When adding a new env var, do all five:
+1. Add it to `.env.example` **and** the README env table, with its consumer.
 2. Note whether it is `NEXT_PUBLIC_` (**shipped to the browser — never a secret**)
    or server-only.
 3. Say which unit needs it (Next app, ws-server, or both).
 4. Set it in the deploy target(s) — a Vercel-only var will not reach ws-server.
+5. Never put a real value in `.env.example` — placeholders only.
 
 Gotcha: `FIREBASE_ADMIN_PRIVATE_KEY` is stored with escaped `\n`; every route
 un-escapes with `.replace(/\\n/g, "\n")`. Paste it escaped.
