@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// Deploy with:  firebase deploy --only firestore:rules
+// (or paste into Firebase console -> Firestore -> Rules)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usernames nobody may register: privilege/impersonation names, role
+    // addresses, app routes, and placeholders that read as a real state.
+    // Keep in sync with lib/reservedUsernames.ts.
+    function reservedUsernames() {
+      return [
+        'admin', 'administrator', 'root', 'superuser', 'sysadmin', 'system',
+        'owner', 'staff', 'mod', 'moderator', 'official', 'security',
+        'wordle', 'fakewordle', 'prav',
+        'support', 'help', 'contact', 'info', 'billing', 'abuse',
+        'noreply', 'no-reply', 'webmaster', 'postmaster',
+        'api', 'auth', 'login', 'logout', 'signup', 'register', 'account',
+        'settings', 'scoreboard', 'multiplayer', 'custom', 'challenge',
+        'guest', 'anonymous', 'null', 'undefined', 'none', 'deleted', 'unknown',
+        'me', 'you', 'everyone', 'all'
+      ];
+    }
+
+    // Exact names permitted despite the checks below: owner test accounts
+    // (single player + multiplayer). Keep in sync with lib/reservedUsernames.ts.
+    function allowlistedUsernames() {
+      return ['pravadmin', 'pravadmin1'];
+    }
+
+    // Terms that may not appear anywhere in a username, so nobody can pose as
+    // the site or its staff (WordleAdmin, Admin_Support, official-help).
+    // Deliberately narrow -- short words like 'mod' stay exact-match only, or
+    // ordinary names like 'modern' would be rejected.
+    function impersonationName(name) {
+      return name.matches('.*(admin|moderator|superuser|official|staff|support|security|webmaster|postmaster).*');
+    }
+
+    // Lowercase, 3-20 chars, must start alphanumeric. The 20-char ceiling also
+    // keeps usernames strictly shorter than a 28-char Firebase uid, so a
+    // username can never collide with the uid-keyed game buckets that share
+    // this collection.
+    function validUsername(name) {
+      return name.matches('^[a-z0-9][a-z0-9_-]{2,19}$')
+             && (
+               name in allowlistedUsernames()
+               || (!(name in reservedUsernames()) && !impersonationName(name))
+             );
+    }
+
+    // The `users` collection holds two different kinds of document:
+    //
+    //   users/{username}          -> { email, uid }   username -> email index
+    //   users/{uid}/games/...     -> a signed-in player's own game history
+    //
+    // The username index must NOT be publicly readable: reading it lets anyone
+    // enumerate registered usernames and harvest the email behind each one.
+    // Username lookups now go through /api/auth/resolve-email and
+    // /api/auth/username-available, which run firebase-admin server-side and
+    // bypass these rules.
+    match /users/{userId} {
+      // No client reads at all. Server routes use the Admin SDK.
+      allow read: if false;
+
+      // A freshly-created account claims its own username document once.
+      // The doc must point at the caller's own uid, and may never be
+      // overwritten or deleted from the client.
+      allow create: if request.auth != null
+                    && validUsername(userId)
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['email', 'uid']);
+      allow update, delete: if false;
+
+      // A player's own game history, read/written by the scoreboard and the
+      // game pages. userId here is the auth uid.
+      match /games/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Shared custom-word challenge links. Anyone with the link can read the
+    // challenge; creation and deletion go through /api/custom-challenge,
+    // which uses the Admin SDK.
+    match /customChallenges/{challengeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Everything else is server-only.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

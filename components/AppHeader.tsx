@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 import { useDarkMode } from "../hooks/useDarkMode";
 import FeedbackModal from "./FeedbackModal";
@@ -137,7 +137,18 @@ export default function AppHeader({
   const { darkMode, toggleDarkMode } = useDarkMode();
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Guest = no Firebase user, but the guest flag is set. Read in an effect so
+  // server and first client render agree.
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) { setIsGuest(false); return; }
+      try { setIsGuest(sessionStorage.getItem("wordle:guest") === "1"); } catch { setIsGuest(false); }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -201,7 +212,7 @@ export default function AppHeader({
               {greetingName && (
                 <>
                   <div className="menu-greeting">
-                    <span className="menu-greeting-label">Signed in as</span>
+                    <span className="menu-greeting-label">{isGuest ? "Playing as" : "Signed in as"}</span>
                     <span className="menu-greeting-name">{greetingName}</span>
                   </div>
                   <div className="menu-divider" />
@@ -245,7 +256,7 @@ export default function AppHeader({
               />
               <MenuItem
                 icon={<Icon.Logout />}
-                label="Logout"
+                label={isGuest ? "Exit guest mode" : "Logout"}
                 danger
                 onClick={async () => {
                   closeMenu();
