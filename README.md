@@ -66,6 +66,8 @@ Create a `.env.local` based on the table below. Features that depend on a missin
 | `NEXT_PUBLIC_SITE_URL` | OG image, sitemap, robots | Canonical site URL, e.g. `https://wordlebyprav.com` |
 | `NEXT_PUBLIC_COMING_SOON` | Home page, robots, sitemap | When `"true"`, shows the waitlist landing |
 | `NEXT_PUBLIC_WS_URL` | Multiplayer client | URL of the `ws-server` |
+| `UPSTASH_REDIS_REST_URL` | `lib/rateLimit.ts` (all rate-limited routes) | Optional but strongly recommended in production. Set with the token below |
+| `UPSTASH_REDIS_REST_TOKEN` | Same | Secret. Without both, rate limits fall back to per-instance in-memory and reset on cold start |
 
 ## Scripts
 

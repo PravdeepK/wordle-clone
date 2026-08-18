@@ -21,7 +21,7 @@ function getAdminApp() {
  * collection stays private; returns a boolean and nothing else.
  */
 export async function POST(req: NextRequest) {
-  const ipLimit = rateLimit(`username-available:ip:${clientIp(req)}`, 20, 60_000);
+  const ipLimit = await rateLimit(`username-available:ip:${clientIp(req)}`, 20, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please wait and try again." },

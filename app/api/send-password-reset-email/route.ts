@@ -17,7 +17,7 @@ function getAdminApp() {
 }
 
 export async function POST(req: NextRequest) {
-  const ipLimit = rateLimit(`reset:ip:${clientIp(req)}`, 5, 60_000);
+  const ipLimit = await rateLimit(`reset:ip:${clientIp(req)}`, 5, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please wait and try again." },
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email is required." }, { status: 400 });
   }
 
-  const emailLimit = rateLimit(`reset:email:${email.toLowerCase()}`, 3, 60_000);
+  const emailLimit = await rateLimit(`reset:email:${email.toLowerCase()}`, 3, 60_000);
   if (!emailLimit.allowed) {
     return NextResponse.json(
       { error: "Password reset email already sent. Please check your inbox." },

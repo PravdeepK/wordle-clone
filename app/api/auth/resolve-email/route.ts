@@ -25,7 +25,7 @@ const NOT_FOUND = { error: "not_found" };
  * Returns only the email — never the stored document.
  */
 export async function POST(req: NextRequest) {
-  const ipLimit = rateLimit(`resolve-email:ip:${clientIp(req)}`, 10, 60_000);
+  const ipLimit = await rateLimit(`resolve-email:ip:${clientIp(req)}`, 10, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please wait and try again." },

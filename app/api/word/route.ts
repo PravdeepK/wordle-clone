@@ -26,7 +26,7 @@ function pickFallback(length: number, recent: string[]): string {
 }
 
 export async function POST(req: Request) {
-  const limit = rateLimit(`word:${clientIp(req)}`, 500, 60_000);
+  const limit = await rateLimit(`word:${clientIp(req)}`, 500, 60_000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many requests" },

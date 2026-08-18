@@ -17,7 +17,7 @@ function getAdminApp() {
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  const ipLimit = rateLimit(`custom-challenge:create:ip:${ip}`, 10, 60_000);
+  const ipLimit = await rateLimit(`custom-challenge:create:ip:${ip}`, 10, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please wait and try again." },
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const ip = clientIp(req);
-  const ipLimit = rateLimit(`custom-challenge:delete:ip:${ip}`, 30, 60_000);
+  const ipLimit = await rateLimit(`custom-challenge:delete:ip:${ip}`, 30, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests." },

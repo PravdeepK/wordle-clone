@@ -29,7 +29,7 @@ function escapeHtml(input: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const ipLimit = rateLimit(`feedback:ip:${clientIp(req)}`, 5, 60_000);
+  const ipLimit = await rateLimit(`feedback:ip:${clientIp(req)}`, 5, 60_000);
   if (!ipLimit.allowed) {
     return NextResponse.json(
       { error: "Too many feedback submissions. Please wait and try again." },

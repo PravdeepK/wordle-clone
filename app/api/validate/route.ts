@@ -5,7 +5,7 @@ import { rateLimit, clientIp } from "../../../lib/rateLimit";
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
 export async function POST(request: Request) {
-  const limit = rateLimit(`validate:${clientIp(request)}`, 1000, 60_000);
+  const limit = await rateLimit(`validate:${clientIp(request)}`, 1000, 60_000);
   if (!limit.allowed) {
     return NextResponse.json(
       { valid: false, error: "Too many requests" },
