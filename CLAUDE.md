@@ -231,6 +231,42 @@ is inherent to the login flow. Fully closing it requires moving sign-in server-s
 (Identity Toolkit `signInWithPassword` + custom token). **Intentionally out of scope.**
 Don't re-litigate it as a new finding.
 
+### Guest mode — play without an account
+
+[lib/guest.ts](lib/guest.ts) owns the whole thing. **Never read or write the
+`wordle:guest` key directly** — go through `isGuest()` / `guestName()` /
+`enterGuestMode()` / `exitGuestMode()`, or the two storage keys and the legacy
+fallback drift apart again.
+
+- **Storage is `localStorage`, deliberately.** It was `sessionStorage`, which is
+  per-tab: a guest who opened a shared challenge link in a second tab was bounced
+  to `/login`. Reads still fall back to `sessionStorage` and `exitGuestMode()`
+  clears both, so sessions from the old build survive the change.
+- **Every guest gets a unique name (`Guest-A7K2`), not `"Guest"`.** Two guests in
+  one multiplayer room would otherwise share a name, which makes the board labels,
+  the chat colours and the join/leave toasts ambiguous. `ws-server` also appends
+  `(2)` to a guest whose name matches the host's, as a backstop against a client
+  that sends whatever it likes.
+- **A real sign-in calls `exitGuestMode()`** (login panel + home page). So does the
+  unverified-email bounce — without it, that sign-out drops the user into guest
+  mode on their next visit.
+- Guests have **no uid**, so every Firestore write is skipped, not failed:
+  `saveResult`/`saveGameResult` return early. The scoreboard says so rather than
+  showing an empty list with no explanation.
+
+### Gated pages must preserve where the visitor was headed
+
+A signed-out visitor hitting a gated page redirects to
+`loginHref("/that/page")` ([lib/authRedirect.ts](lib/authRedirect.ts)), and the
+login panel returns them to `?next=` after login *or* "Continue as guest".
+Redirecting to a bare `/login` is the bug that made a shared custom-challenge link
+dump guests on the home page.
+
+`safeNextPath()` is the open-redirect guard: same-origin absolute paths only, and
+never back to `/login`. **Any new `?next=` consumer must go through it.** The login
+panel reads the param from `window.location` rather than `useSearchParams()` on
+purpose — the hook forces a CSR bailout and `/login` stops being prerendered.
+
 ---
 
 ## 10. Known technical debt (intentionally deferred)

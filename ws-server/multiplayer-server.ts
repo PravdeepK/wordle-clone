@@ -62,6 +62,16 @@ function sanitizeUsername(name: unknown): string {
   return trimmed || "Player";
 }
 
+/**
+ * Keep the two players in a room distinguishable. Guests pick their own names
+ * client-side, so two of them can arrive with the same one; identical names
+ * make the board labels, chat attribution and join/leave notices ambiguous.
+ */
+function distinguishFromHost(guestName: string, hostName: string): string {
+  if (guestName.toLowerCase() !== hostName.toLowerCase()) return guestName;
+  return `${guestName} (2)`;
+}
+
 const MIN_WORD_LENGTH = 3;
 const MAX_WORD_LENGTH = 10;
 const DEFAULT_WORD_LENGTH = 5;
@@ -163,8 +173,16 @@ wss.on("connection", (socket: WebSocket) => {
     if (type === "join-room" && payload?.roomId) {
       const roomId = normalizeRoomId(payload.roomId)!;
       const room = rooms[roomId];
-      if (room && !room.guest) {
-        const guestUsername = sanitizeUsername(payload?.username);
+      if (room && room.host === socket) {
+        socket.send(JSON.stringify({ type: "error", payload: "You are already in this room." }));
+      } else if (room && room.guest) {
+        // Distinct from room-expired: the code was right, the room is just full.
+        socket.send(JSON.stringify({ type: "error", payload: "That room is already full." }));
+      } else if (room) {
+        const guestUsername = distinguishFromHost(
+          sanitizeUsername(payload?.username),
+          room.hostUsername
+        );
         const guestColor = sanitizeColor(payload?.color);
         room.guest = socket;
         room.guestUsername = guestUsername;

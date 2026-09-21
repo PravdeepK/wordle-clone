@@ -6,6 +6,8 @@ import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import AppHeader from "../../components/AppHeader";
+import { isGuest } from "../../lib/guest";
+import { loginHref } from "../../lib/authRedirect";
 
 export default function CustomWordPage() {
   const [customWord, setCustomWord] = useState("");
@@ -16,11 +18,8 @@ export default function CustomWordPage() {
   useDarkMode();
 
   useEffect(() => {
-    const isGuest = (() => {
-      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
-    })();
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user && !isGuest) router.push("/login");
+      if (!user && !isGuest()) router.replace(loginHref("/custom-word"));
     });
     return () => unsub();
   }, [router]);

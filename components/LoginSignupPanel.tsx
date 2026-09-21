@@ -11,6 +11,8 @@ import {
 import { auth } from "../config/firebaseConfig";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { checkUsername } from "../lib/reservedUsernames";
+import { enterGuestMode, exitGuestMode } from "../lib/guest";
+import { nextFromLocation } from "../lib/authRedirect";
 
 const db = getFirestore();
 
@@ -55,6 +57,11 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Where to land after a successful login or "continue as guest": the page
+  // that sent us here (`?next=`), or home. Read at call time rather than via
+  // useSearchParams so /login stays statically prerenderable.
+  const afterAuthTarget = () => nextFromLocation() ?? "/";
+
   // Username -> email happens server-side (firebase-admin) so the `users`
   // collection is not publicly readable.
   const resolveEmail = async (identifier: string): Promise<string | null> => {
@@ -90,10 +97,12 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
           setError("Please verify your email before logging in. Check your inbox (and spam folder).");
           return;
         }
+        // A real sign-in supersedes any guest session left in this browser.
+        exitGuestMode();
         if (onLoginSuccess) {
           onLoginSuccess();
         } else {
-          router.push("/");
+          router.replace(afterAuthTarget());
         }
       } else {
         if (password !== confirmPassword) {
@@ -234,13 +243,13 @@ export default function LoginSignupPanel({ cardClassName = "", onLoginSuccess }:
   };
 
   const handleGuest = () => {
-    try {
-      sessionStorage.setItem("wordle:guest", "1");
-    } catch {}
+    enterGuestMode();
     if (onLoginSuccess) {
       onLoginSuccess();
     } else {
-      router.push("/");
+      // replace, not push: the login page should not sit in history behind the
+      // page the guest actually wanted.
+      router.replace(afterAuthTarget());
     }
   };
 

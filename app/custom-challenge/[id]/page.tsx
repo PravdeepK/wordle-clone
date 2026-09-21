@@ -9,6 +9,8 @@ import { checkGuess } from "../../../lib/wordle";
 import { validateWord } from "../../../lib/validateWord";
 import { useDarkMode } from "../../../hooks/useDarkMode";
 import { useGlobalGuessKeyboard } from "../../../hooks/useGlobalGuessKeyboard";
+import { isGuest } from "../../../lib/guest";
+import { loginHref } from "../../../lib/authRedirect";
 import { useFlipAnimation } from "../../../hooks/useFlipAnimation";
 import VirtualKeyboard from "../../../components/VirtualKeyboard";
 import AppHeader from "../../../components/AppHeader";
@@ -30,6 +32,7 @@ export default function CustomChallengePage() {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [challengeExpired, setChallengeExpired] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [ready, setReady] = useState(false);
 
@@ -44,19 +47,24 @@ export default function CustomChallengePage() {
   } = useFlipAnimation();
 
   useEffect(() => {
-    const isGuest = (() => {
-      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
-    })();
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user && !isGuest) { router.push("/login"); return; }
+      // Signed out and not a guest: send them to login, but remember the
+      // challenge so they come back here instead of the home page.
+      if (!user && !isGuest()) { router.replace(loginHref(`/custom-challenge/${id}`)); return; }
       setUid(user ? user.uid : null);
 
-      const docSnap = await getDoc(doc(db, "customChallenges", id));
-      if (docSnap.exists()) {
-        setSecretWord((docSnap.data().word as string).toUpperCase());
-        setReady(true);
-      } else {
-        setChallengeExpired(true);
+      try {
+        const docSnap = await getDoc(doc(db, "customChallenges", id));
+        if (docSnap.exists()) {
+          setSecretWord((docSnap.data().word as string).toUpperCase());
+          setReady(true);
+        } else {
+          setChallengeExpired(true);
+        }
+      } catch (e) {
+        // Without this the page renders null forever on a network/rules error.
+        Sentry.captureException(e);
+        setLoadFailed(true);
       }
     });
     return () => unsub();
@@ -150,6 +158,21 @@ export default function CustomChallengePage() {
     setCurrentGuess,
     onEnter: () => handleKeyPress({ key: "Enter" }),
   });
+
+  if (loadFailed) {
+    return (
+      <div className="page-wrapper">
+        <AppHeader title="Custom challenge" titleShort="Custom" backHref="/" />
+        <div className="game-content game-content--centered">
+          <div className="game-stage">
+            <p style={{ color: "var(--color-text-muted)" }}>
+              Could not load this challenge. Check your connection and refresh.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (challengeExpired) {
     return (

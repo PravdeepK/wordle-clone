@@ -6,6 +6,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 import { useDarkMode } from "../hooks/useDarkMode";
 import FeedbackModal from "./FeedbackModal";
+import { isGuest as readGuestFlag, exitGuestMode } from "../lib/guest";
 
 /* ── Inline icons ── */
 export const Icon = {
@@ -144,8 +145,7 @@ export default function AppHeader({
   // server and first client render agree.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) { setIsGuest(false); return; }
-      try { setIsGuest(sessionStorage.getItem("wordle:guest") === "1"); } catch { setIsGuest(false); }
+      setIsGuest(user ? false : readGuestFlag());
     });
     return () => unsub();
   }, []);
@@ -260,7 +260,7 @@ export default function AppHeader({
                 danger
                 onClick={async () => {
                   closeMenu();
-                  try { sessionStorage.removeItem("wordle:guest"); } catch {}
+                  exitGuestMode();
                   await signOut(auth);
                   router.replace("/login");
                 }}
