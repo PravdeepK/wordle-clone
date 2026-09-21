@@ -13,6 +13,7 @@ import { useFlipAnimation } from "../hooks/useFlipAnimation";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import AppHeader, { Icon } from "../components/AppHeader";
 import { loadRecentWords, pushRecentWord } from "../lib/recentWords";
+import { isGuest, guestName, exitGuestMode } from "../lib/guest";
 
 const db = getFirestore();
 const MAX_TRIES = 6;
@@ -67,23 +68,23 @@ export default function WordleHomePage() {
 
   useEffect(() => {
     const isLocalDev = process.env.NODE_ENV === "development";
-    const isGuest = (() => {
-      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
-    })();
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        if (isGuest) {
-          setUsername("Guest");
+        if (isGuest()) {
+          setUsername(guestName());
           setUid(null);
           setUserEmail(null);
         } else {
           router.replace("/login");
         }
       } else if (!user.emailVerified && !isLocalDev) {
+        // Clear guest state too, or this bounce silently drops an unverified
+        // account into guest mode on the next visit.
+        exitGuestMode();
         await signOut(auth);
         router.replace("/login");
       } else {
-        try { sessionStorage.removeItem("wordle:guest"); } catch {}
+        exitGuestMode();
         setUsername(user.displayName || "Player");
         setUid(user.uid);
         setUserEmail(user.email || null);

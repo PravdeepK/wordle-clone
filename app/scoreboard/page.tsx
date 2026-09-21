@@ -15,6 +15,8 @@ import { auth } from "../../config/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import AppHeader from "../../components/AppHeader";
+import { isGuest as readGuestFlag, guestName } from "../../lib/guest";
+import { loginHref } from "../../lib/authRedirect";
 
 const db = getFirestore();
 
@@ -34,6 +36,7 @@ export default function Scoreboard() {
 
   const [uid, setUid] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [games, setGames] = useState<GameEntry[]>([]);
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [resultFilter, setResultFilter] = useState("all");
@@ -130,17 +133,20 @@ export default function Scoreboard() {
   };
 
   useEffect(() => {
-    const isGuest = (() => {
-      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
-    })();
     const unsub = onAuthStateChanged(auth, (u) => {
       if (!u) {
-        if (isGuest) { setUid(null); setIsGuest(true); return; }
-        router.push("/login");
+        if (readGuestFlag()) {
+          setUid(null);
+          setIsGuest(true);
+          setDisplayName(guestName());
+          return;
+        }
+        router.replace(loginHref("/scoreboard"));
         return;
       }
       setIsGuest(false);
       setUid(u.uid);
+      setDisplayName(u.displayName || "Player");
       fetchAllGames(u.uid);
     });
     return () => unsub();
@@ -165,7 +171,7 @@ export default function Scoreboard() {
 
   return (
     <div className="page-wrapper">
-      <AppHeader title="Scoreboard" backHref="/" />
+      <AppHeader title="Scoreboard" backHref="/" greetingName={displayName ?? undefined} />
 
       <div className="game-content game-content--centered">
         <div className="game-stage">

@@ -15,6 +15,8 @@ import { useGlobalGuessKeyboard } from "../../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../../hooks/useFlipAnimation";
 import * as Sentry from "@sentry/nextjs";
 import { loadRecentWords, pushRecentWord } from "../../lib/recentWords";
+import { isGuest, guestName } from "../../lib/guest";
+import { loginHref } from "../../lib/authRedirect";
 
 const MAX_TRIES = 6;
 
@@ -118,7 +120,7 @@ export default function MultiplayerPage() {
     try { localStorage.setItem("mp.chatColor", next); } catch {}
   };
 
-  type ChatEntry = { id: number; kind: "system" | "user"; text: string; from?: string; color?: string };
+  type ChatEntry = { id: number; kind: "system" | "user"; text: string; from?: string; color?: string; mine?: boolean };
   const [chatLog, setChatLog] = useState<ChatEntry[]>([]);
   const [chatInput, setChatInput] = useState("");
   const chatIdRef = useRef(0);
@@ -127,8 +129,8 @@ export default function MultiplayerPage() {
   const pushSystem = (text: string) => {
     setChatLog((log) => [...log, { id: ++chatIdRef.current, kind: "system", text }]);
   };
-  const pushUser = (text: string, from: string, color?: string) => {
-    setChatLog((log) => [...log, { id: ++chatIdRef.current, kind: "user", text, from, color }]);
+  const pushUser = (text: string, from: string, color?: string, mine = false) => {
+    setChatLog((log) => [...log, { id: ++chatIdRef.current, kind: "user", text, from, color, mine }]);
   };
 
   const [oppTyping, setOppTyping] = useState<{ from: string; color: string } | null>(null);
@@ -154,16 +156,15 @@ export default function MultiplayerPage() {
   const themAnim = useFlipAnimation();
 
   useEffect(() => {
-    const isGuest = (() => {
-      try { return sessionStorage.getItem("wordle:guest") === "1"; } catch { return false; }
-    })();
     const unsub = onAuthStateChanged(auth, (u) => {
       if (!u) {
-        if (isGuest) {
+        if (isGuest()) {
           setUid(null);
-          setMyUsername("Guest");
+          // Unique per guest: two guests in one room must not both be "Guest",
+          // or the boards, chat and join/leave toasts are indistinguishable.
+          setMyUsername(guestName());
         } else {
-          router.replace("/login");
+          router.replace(loginHref("/multiplayer"));
         }
       } else {
         setUid(u.uid);
@@ -269,7 +270,7 @@ export default function MultiplayerPage() {
     const text = chatInput.trim();
     if (!text || !roomId) return;
     sendJsonMessage("chat", { roomId, text });
-    pushUser(text, myUsername, myColor);
+    pushUser(text, myUsername, myColor, true);
     setChatInput("");
     if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
     sendTyping(false);
@@ -635,8 +636,7 @@ export default function MultiplayerPage() {
                 ) : (
                   chatLog.map((entry) => {
                     const fromColor = entry.kind === "user"
-                      ? entry.color
-                          ?? (entry.from === myUsername ? myColor : opponentColor)
+                      ? entry.color ?? (entry.mine ? myColor : opponentColor)
                       : undefined;
                     return (
                       <div key={entry.id} className={`chat-line chat-line--${entry.kind}`}>

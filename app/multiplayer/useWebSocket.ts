@@ -68,6 +68,10 @@ export default function useWebSocket(options: WebSocketOptions = {}) {
           if (type === "typing")          opts.onTyping?.(payload?.from ?? "Opponent", payload?.color ?? "", !!payload?.isTyping);
           if (type === "peer-left")       opts.onPeerLeft?.(payload?.username ?? "Opponent");
           if (type === "room-expired")    setWsError("Room has expired. Please refresh and try again.");
+          // The server's own errors ("Could not generate word.", "That room is
+          // already full.") were previously dropped, leaving the user staring
+          // at a lobby that silently did nothing.
+          if (type === "error")           setWsError(typeof payload === "string" ? payload : "Something went wrong.");
         } catch {
           // Malformed payload from server; ignore and keep the socket open.
         }
