@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 import * as Sentry from "@sentry/nextjs";
-import { checkGuess } from "../lib/wordle";
+import { checkGuess, tileA11yProps } from "../lib/wordle";
 import { validateWord } from "../lib/validateWord";
 import { useGlobalGuessKeyboard } from "../hooks/useGlobalGuessKeyboard";
 import { useFlipAnimation } from "../hooks/useFlipAnimation";
@@ -342,6 +342,7 @@ export default function WordleHomePage() {
                           key={colIndex}
                           className={`cell ${colorClass} ${hasFilled ? "cell--filled" : ""} ${flipClass}`}
                           style={flipStyle}
+                          {...tileA11yProps(letter, colorClass)}
                         >
                           {letter}
                         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { tileLabel } from "../lib/wordle";
 
 const ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"] as const;
 
@@ -24,6 +25,7 @@ export default function VirtualKeyboard({ onKey, keyStatuses, disabled = false }
             <button
               key={k}
               className={`key ${keyStatuses[k] || ""}`}
+              aria-label={tileLabel(k, keyStatuses[k])}
               onClick={() => onKey(k)}
               disabled={disabled}
             >
@@ -31,7 +33,7 @@ export default function VirtualKeyboard({ onKey, keyStatuses, disabled = false }
             </button>
           ))}
           {i === 2 && (
-            <button className="key large-key" onClick={() => onKey("⌫")} disabled={disabled}>
+            <button className="key large-key" onClick={() => onKey("⌫")} disabled={disabled} aria-label="Backspace">
               ⌫
             </button>
           )}

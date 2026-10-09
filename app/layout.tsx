@@ -108,10 +108,30 @@ const jsonLd = {
   ],
 };
 
+/**
+ * Applies saved settings to <html> before first paint (no flash of the wrong
+ * theme or palette). Mirrors `applyToDocument` in lib/settings.ts — keep the
+ * storage keys and attribute names in sync with that file.
+ */
+const settingsBootScript = `(function(){try{
+var d=document.documentElement,ls=localStorage;
+if(ls.getItem("darkMode")==="true")d.classList.add("dark");
+var s=JSON.parse(ls.getItem("wordle:settings")||"{}")||{};
+var hex=/^#[0-9a-fA-F]{6}$/;
+d.dataset.palette=typeof s.palette==="string"?s.palette:"classic";
+d.dataset.tileMarks=typeof s.tileMarks==="string"?s.tileMarks:"off";
+if(s.reduceMotion===true)d.classList.add("reduce-motion");
+if(s.palette==="custom"&&hex.test(s.customCorrect)&&hex.test(s.customPresent)){
+var txt=function(h){var n=parseInt(h.slice(1),16),l=function(c){c/=255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4)};var L=0.2126*l(n>>16&255)+0.7152*l(n>>8&255)+0.0722*l(n&255);return 1.05/(L+0.05)>=(L+0.05)/0.06?"#ffffff":"#1a1a1b"};
+d.style.setProperty("--color-correct",s.customCorrect);d.style.setProperty("--color-present",s.customPresent);
+d.style.setProperty("--color-correct-text",txt(s.customCorrect));d.style.setProperty("--color-present-text",txt(s.customPresent));}
+}catch(e){}})();`;
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: settingsBootScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

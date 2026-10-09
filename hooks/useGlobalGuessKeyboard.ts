@@ -51,6 +51,8 @@ export function useGlobalGuessKeyboard(options: {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (blocksGlobalGuessKeys(e.target)) return;
+      // A modal (settings, feedback) is open — Enter on its buttons must not submit a guess.
+      if (document.querySelector('[aria-modal="true"]')) return;
 
       const ae = document.activeElement as HTMLInputElement | null;
       if (ae?.tagName === "INPUT" && (ae.type === "checkbox" || ae.type === "radio" || ae.type === "range")) {
