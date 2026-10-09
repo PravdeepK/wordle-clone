@@ -267,6 +267,30 @@ never back to `/login`. **Any new `?next=` consumer must go through it.** The lo
 panel reads the param from `window.location` rather than `useSearchParams()` on
 purpose — the hook forces a CSR bailout and `/login` stops being prerendered.
 
+### Settings & colour-vision support
+
+[lib/settings.ts](lib/settings.ts) is the single store for player settings (dark
+mode, reduce motion, colour palette, tile markers, multiplayer layout and chat
+colour). It is **`localStorage` only, on purpose**: guests have no uid, so Firestore
+would lock them out. No rules change is needed. UI: the **Settings** menu item
+opens [SettingsModal](components/SettingsModal.tsx). It's a modal, not a page,
+because navigating away would throw away an in-progress game.
+
+- Settings apply as attributes on `<html>` (`.dark`, `data-palette`,
+  `data-tile-marks`, `.reduce-motion`). The CSS under "Colour vision" in
+  `styles.css` does the rest, because every board and key colours tiles through
+  `--color-correct/present/absent` (+ `-text`).
+- The inline boot script in [app/layout.tsx](app/layout.tsx) duplicates
+  `applyToDocument()` so there's no flash before hydration. **Change one, change
+  the other.**
+- The `darkMode`, `mp.mobileLayout` and `mp.chatColor` keys are legacy and stay as-is, so
+  existing players keep their choices.
+- Tile state must never be colour-only: revealed tiles and keys carry
+  `aria-label`s via `tileA11yProps` / `tileLabel` in `lib/wordle.ts`. New boards
+  must use them too.
+- `useGlobalGuessKeyboard` ignores keys while any `[aria-modal="true"]` is open,
+  so Enter on a modal button doesn't submit a guess.
+
 ---
 
 ## 10. Known technical debt (intentionally deferred)
@@ -325,10 +349,10 @@ is also ignored — it's a separate package with its own tsconfig (`strict: fals
 the root `tsconfig.json` already excludes it. Keep the two boundaries identical.
 `ws-server` has no lint config of its own; it is typecheck-gated only.
 
-**Known: `npm run lint` currently exits 1** with 7 errors from `eslint-plugin-react-hooks`
-v7's newer rules (`set-state-in-effect`, `refs`) across `useDarkMode`,
+**Known: `npm run lint` currently exits 1** with 5 errors from `eslint-plugin-react-hooks`
+v7's newer rules (`set-state-in-effect`, `refs`) across
 `useGlobalGuessKeyboard`, `useWebSocket`, `WordleLogoTiles`, `FeedbackModal`,
-`auth/action`, `multiplayer`. These are pre-existing patterns, not regressions from the
+`auth/action` (`useDarkMode` and `multiplayer` were cleared by the settings store). These are pre-existing patterns, not regressions from the
 config migration, and fixing them touches hydration-sensitive behavior — treat as its own
 task. `npx eslint . --quiet` exits 0 (warnings only) if you need a green signal meanwhile.
 

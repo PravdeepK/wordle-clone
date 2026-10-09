@@ -1,22 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { updateSettings, useSettings } from "../lib/settings";
 
+/** Thin wrapper over the settings store, kept so existing call sites don't change. */
 export function useDarkMode() {
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("darkMode") === "true";
-    setDarkMode(saved);
-    document.documentElement.classList.toggle("dark", saved);
-  }, []);
-
-  const toggleDarkMode = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("darkMode", String(next));
-    document.documentElement.classList.toggle("dark", next);
-  };
-
+  const { darkMode } = useSettings();
+  const toggleDarkMode = () => updateSettings({ darkMode: !darkMode });
   return { darkMode, toggleDarkMode };
 }
